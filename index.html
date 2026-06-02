@@ -332,6 +332,11 @@
   </button>
   <div class="label">Confirm & log</div>
   <div class="confirm-card" id="confirm-details"></div>
+
+  <textarea id="description"
+    placeholder="Optional description (Diet Coke, Blinkit groceries, Electricity bill...)"
+    style="width:100%;min-height:80px;background:#1a1a1a;border:1px solid #2e2e2e;border-radius:12px;color:white;padding:12px;font-family:inherit;resize:none;"></textarea>
+
   <div class="error-banner" id="err-banner">Could not save. Check your connection and try again.</div>
   <button class="action-btn" id="confirm-btn" onclick="logExpense()">Log expense ✓</button>
 </div>
@@ -523,6 +528,7 @@ async function logExpense() {
       person: state.person,
       house_amount: state.pendingHouse,
       personal_amount: state.pendingPersonal,
+      description: document.getElementById('description').value.trim(),
       month_key: getCurrentMonthKey(),
       logged_at: new Date().toISOString()
     });
@@ -534,6 +540,7 @@ async function logExpense() {
     if (state.pendingPersonal > 0) parts.push('₹' + state.pendingPersonal.toLocaleString('en-IN') + ' → personal');
     document.getElementById('succ-sub').textContent = parts.join('\n');
     document.getElementById('succ-btn').className = `action-btn ${state.clr}`;
+    document.getElementById('description').value = '';
     showScreen('s-success');
   } catch(e) {
     loader(false);
@@ -605,7 +612,7 @@ function renderSummaryForMonth(all, monthKey) {
         return `<div class="log-item">
           <div class="li-dot ${clr}"></div>
           <div class="li-name">${e.person}</div>
-          <div class="li-tag">${tag}</div>
+          <div class="li-tag">${tag}${e.description ? " • " + e.description : ""}</div>
           <div class="li-date">${d.getDate()}/${d.getMonth()+1}</div>
           <div class="li-amt">₹${amt}</div>
         </div>`;

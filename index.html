@@ -206,6 +206,7 @@
     .li-tag { font-size: 11px; color: var(--muted); }
     .li-amt { margin-left: auto; font-family: 'DM Mono', monospace; font-weight: 500; }
     .li-date { font-size: 11px; color: var(--muted); }
+    .del-btn { margin-left:8px;background:#3a1515;border:1px solid #6b2020;color:#ff8a8a;border-radius:8px;padding:4px 8px;cursor:pointer; }
 
     .upload-zone { border: 1px dashed var(--border); border-radius: var(--radius); padding: 22px; text-align: center; cursor: pointer; color: var(--muted); font-size: 13px; transition: border-color 0.15s; }
     .upload-zone:active { border-color: var(--sim); }
@@ -413,7 +414,25 @@ function loader(show, text='Saving...') {
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  if (id === 's-pick') refreshPickSummary();
+  if (id === 's-pick') 
+async function deleteExpense(id) {
+  const ok = confirm('Are you sure you want to delete this expense?');
+  if (!ok) return;
+
+  loader(true, 'Deleting expense...');
+  try {
+    await supaFetch(`expenses?id=eq.${id}`, 'DELETE');
+    loader(false);
+    await loadSummary();
+    await refreshPickSummary();
+  } catch(e) {
+    loader(false);
+    alert('Could not delete expense.');
+  }
+}
+
+
+refreshPickSummary();
   if (id === 's-summary') loadSummary();
 }
 
@@ -613,8 +632,9 @@ function renderSummaryForMonth(all, monthKey) {
           <div class="li-dot ${clr}"></div>
           <div class="li-name">${e.person}</div>
           <div class="li-tag">${tag}${e.description ? " • " + e.description : ""}</div>
-          <div class="li-date">${d.getDate()}/${d.getMonth()+1}</div>
+          <div class="li-date">${d.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</div>
           <div class="li-amt">₹${amt}</div>
+          <button class="del-btn" onclick="deleteExpense('${e.id}')">🗑</button>
         </div>`;
       }).join('');
 }

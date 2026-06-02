@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="theme-color" content="#0f0f0f"/>
+  <title>House Expenses</title>
+  <link rel="manifest" href="manifest.json"/>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
+
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --surface2: #242424;
+      --border: #2e2e2e;
+      --text: #f0f0f0;
+      --muted: #666;
+      --nav: #7c6af7;
+      --nav-bg: #1e1b3a;
+      --sim: #2db87a;
+      --sim-bg: #0f2a1e;
+      --lak: #e8683a;
+      --lak-bg: #2a1710;
+      --house: #4a9eff;
+      --house-bg: #0d1f35;
+      --personal: #f7c948;
+      --personal-bg: #2a2210;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+
+    .screen { display: none; flex-direction: column; min-height: 100dvh; padding: 20px 18px 40px; gap: 16px; animation: fadeUp 0.22s ease; }
+    .screen.active { display: flex; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+    .top-bar { display: flex; align-items: center; justify-content: space-between; padding-top: env(safe-area-inset-top); }
+    .top-bar h1 { font-size: 22px; font-weight: 500; letter-spacing: -0.5px; }
+    .back-btn { background: none; border: none; color: var(--muted); font-size: 13px; font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 6px 0; }
+    .back-btn svg { width: 16px; height: 16px; }
+
+    .label { font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+    .person-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .person-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 10px 16px;
+      cursor: pointer;
+      text-align: center;
+      transition: transform 0.1s, border-color 0.15s;
+      color: var(--text);
+      font-family: inherit;
+    }
+    .person-btn:active { transform: scale(0.95); }
+    .person-btn.nav { border-color: var(--nav); }
+    .person-btn.sim { border-color: var(--sim); }
+    .person-btn.lak { border-color: var(--lak); }
+    .avatar {
+      width: 46px; height: 46px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; font-weight: 500; margin: 0 auto 10px;
+    }
+    .nav .avatar { background: var(--nav-bg); color: var(--nav); }
+    .sim .avatar { background: var(--sim-bg); color: var(--sim); }
+    .lak .avatar { background: var(--lak-bg); color: var(--lak); }
+    .person-name { font-size: 14px; font-weight: 500; }
+
+    .cat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .cat-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 8px 14px;
+      cursor: pointer;
+      text-align: center;
+      transition: transform 0.1s, border-color 0.15s, background 0.15s;
+      color: var(--text);
+      font-family: inherit;
+    }
+    .cat-btn:active { transform: scale(0.95); }
+    .cat-icon { font-size: 24px; margin-bottom: 8px; }
+    .cat-name { font-size: 13px; font-weight: 500; }
+    .cat-desc { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.3; }
+    .cat-btn.house.sel { border-color: var(--house); background: var(--house-bg); }
+    .cat-btn.personal.sel { border-color: var(--personal); background: var(--personal-bg); }
+    .cat-btn.mixed.sel { border-color: var(--sim); background: var(--sim-bg); }
+
+    .amount-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 20px;
+      text-align: center;
+    }
+    .amount-box .rupee {
+      font-family: 'DM Mono', monospace;
+      font-size: 42px;
+      font-weight: 500;
+      letter-spacing: -2px;
+      color: var(--text);
+    }
+    .amount-box .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .nkey {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px;
+      font-size: 22px;
+      font-weight: 400;
+      font-family: 'DM Mono', monospace;
+      cursor: pointer;
+      text-align: center;
+      color: var(--text);
+      transition: transform 0.08s, background 0.1s;
+    }
+    .nkey:active { transform: scale(0.93); background: var(--surface2); }
+    .nkey.del { font-size: 16px; color: var(--muted); }
+    .nkey.go { font-size: 15px; font-weight: 500; font-family: 'DM Sans', sans-serif; }
+    .nkey.go.nav { background: var(--nav-bg); color: var(--nav); border-color: var(--nav); }
+    .nkey.go.sim { background: var(--sim-bg); color: var(--sim); border-color: var(--sim); }
+    .nkey.go.lak { background: var(--lak-bg); color: var(--lak); border-color: var(--lak); }
+
+    .split-container { display: flex; flex-direction: column; gap: 1px; background: var(--border); border-radius: var(--radius); overflow: hidden; }
+    .split-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface); }
+    .split-label { flex: 1; font-size: 13px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .split-toggle { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); flex-shrink: 0; }
+    .split-toggle button {
+      padding: 5px 10px; font-size: 11px; font-weight: 500;
+      border: none; cursor: pointer; background: none;
+      color: var(--muted); font-family: inherit; transition: all 0.15s;
+    }
+    .split-toggle button.ah { background: var(--house-bg); color: var(--house); }
+    .split-toggle button.ap { background: var(--personal-bg); color: var(--personal); }
+    .split-amt { width: 68px; font-family: 'DM Mono', monospace; font-size: 13px; text-align: right; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); flex-shrink: 0; }
+    .split-totals { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 14px; display: flex; gap: 16px; }
+    .split-total-item { flex: 1; }
+    .split-total-item .stl { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+    .split-total-item .stv { font-size: 15px; font-weight: 500; font-family: 'DM Mono', monospace; }
+
+    .confirm-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .confirm-row { display: flex; justify-content: space-between; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .confirm-row:last-child { border: none; }
+    .confirm-row .cl { color: var(--muted); }
+    .confirm-row .cv { font-weight: 500; }
+    .badge { display: inline-flex; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+    .badge.h { background: var(--house-bg); color: var(--house); }
+    .badge.p { background: var(--personal-bg); color: var(--personal); }
+
+    .action-btn {
+      width: 100%; padding: 16px; border-radius: var(--radius); border: none;
+      font-size: 16px; font-weight: 500; font-family: inherit;
+      cursor: pointer; transition: transform 0.1s, opacity 0.15s;
+    }
+    .action-btn:active { transform: scale(0.98); opacity: 0.9; }
+    .action-btn.nav { background: var(--nav); color: #fff; }
+    .action-btn.sim { background: var(--sim); color: #fff; }
+    .action-btn.lak { background: var(--lak); color: #fff; }
+    .action-btn.ghost { background: var(--surface2); color: var(--muted); }
+    .action-btn.blue { background: var(--house); color: #fff; }
+
+    .success-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; }
+    .success-ring { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; }
+    .success-ring.nav { background: var(--nav-bg); }
+    .success-ring.sim { background: var(--sim-bg); }
+    .success-ring.lak { background: var(--lak-bg); }
+    .success-title { font-size: 22px; font-weight: 500; letter-spacing: -0.5px; }
+    .success-sub { font-size: 14px; color: var(--muted); line-height: 1.5; }
+
+    .summary-person { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+    .sp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .sp-av { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 500; flex-shrink: 0; }
+    .sp-name { font-size: 15px; font-weight: 500; }
+    .sp-sub { font-size: 12px; color: var(--muted); }
+    .sp-left { margin-left: auto; font-size: 15px; font-weight: 500; font-family: 'DM Mono', monospace; }
+    .prog { height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+    .prog-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+    .sp-stats { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+
+    .house-card { background: var(--house-bg); border: 1px solid var(--house); border-radius: var(--radius); padding: 18px; text-align: center; }
+    .house-card .hc-label { font-size: 12px; color: var(--house); margin-bottom: 6px; letter-spacing: 0.05em; }
+    .house-card .hc-amt { font-size: 32px; font-weight: 500; font-family: 'DM Mono', monospace; color: var(--text); letter-spacing: -1px; }
+
+    .log-list { display: flex; flex-direction: column; gap: 6px; }
+    .log-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface); border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 13px; }
+    .li-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .li-dot.nav { background: var(--nav); }
+    .li-dot.sim { background: var(--sim); }
+    .li-dot.lak { background: var(--lak); }
+    .li-name { font-weight: 500; min-width: 60px; }
+    .li-tag { font-size: 11px; color: var(--muted); }
+    .li-amt { margin-left: auto; font-family: 'DM Mono', monospace; font-weight: 500; }
+    .li-date { font-size: 11px; color: var(--muted); }
+
+    .upload-zone { border: 1px dashed var(--border); border-radius: var(--radius); padding: 22px; text-align: center; cursor: pointer; color: var(--muted); font-size: 13px; transition: border-color 0.15s; }
+    .upload-zone:active { border-color: var(--sim); }
+    .upload-icon { font-size: 26px; margin-bottom: 8px; }
+
+    .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; flex-direction: column; align-items: center; justify-content: center; gap: 16px; font-size: 14px; color: var(--muted); }
+    .loading-overlay.show { display: flex; }
+    .spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--sim); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-banner { background: #2a1010; border: 1px solid #6b2020; color: #f08080; border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13px; display: none; }
+    .error-banner.show { display: block; }
+
+    .month-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+    .month-tab { padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 500; border: 1px solid var(--border); background: none; color: var(--muted); cursor: pointer; white-space: nowrap; font-family: inherit; transition: all 0.15s; }
+    .month-tab.active { background: var(--surface2); color: var(--text); border-color: var(--text); }
+  </style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loader">
+  <div class="spinner"></div>
+  <div id="loader-text">Saving...</div>
+</div>
+
+<!-- SCREEN: Pick person -->
+<div id="s-pick" class="screen active">
+  <div class="top-bar">
+    <h1>House Expenses</h1>
+    <button class="back-btn" onclick="showScreen('s-summary')" style="font-size:12px;color:var(--muted);">
+      📊 Summary
+    </button>
+  </div>
+  <div class="label">Who is logging?</div>
+  <div class="person-grid">
+    <button class="person-btn nav" onclick="pick('Navneil','nav','N')">
+      <div class="avatar">N</div>
+      <div class="person-name">Navneil</div>
+    </button>
+    <button class="person-btn sim" onclick="pick('Simran','sim','S')">
+      <div class="avatar">S</div>
+      <div class="person-name">Simran</div>
+    </button>
+    <button class="person-btn lak" onclick="pick('Lakshay','lak','L')">
+      <div class="avatar">L</div>
+      <div class="person-name">Lakshay</div>
+    </button>
+  </div>
+  <div class="label" style="margin-top:8px;">This month so far</div>
+  <div id="pick-summary" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"></div>
+</div>
+
+<!-- SCREEN: Pick category -->
+<div id="s-cat" class="screen">
+  <button class="back-btn" onclick="showScreen('s-pick')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    Back
+  </button>
+  <div class="label" id="cat-label">What kind of expense?</div>
+  <div class="cat-grid">
+    <button class="cat-btn house" id="cb-house" onclick="pickCat('house')">
+      <div class="cat-icon">🏠</div>
+      <div class="cat-name">House</div>
+      <div class="cat-desc">Groceries, bills, shared</div>
+    </button>
+    <button class="cat-btn personal" id="cb-personal" onclick="pickCat('personal')">
+      <div class="cat-icon">👤</div>
+      <div class="cat-name">Personal</div>
+      <div class="cat-desc">From your ₹5,000</div>
+    </button>
+    <button class="cat-btn mixed" id="cb-mixed" onclick="pickCat('mixed')">
+      <div class="cat-icon">🔀</div>
+      <div class="cat-name">Mixed</div>
+      <div class="cat-desc">Some of both</div>
+    </button>
+  </div>
+  <label class="upload-zone">
+    <div class="upload-icon">📷</div>
+    Upload Blinkit / Swiggy screenshot<br>
+    <span style="font-size:11px;">AI will read and split the items</span>
+    <input type="file" accept="image/*" style="display:none" onchange="handleImg(event)"/>
+  </label>
+</div>
+
+<!-- SCREEN: Amount numpad -->
+<div id="s-amt" class="screen">
+  <button class="back-btn" onclick="showScreen('s-cat')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    Back
+  </button>
+  <div class="amount-box">
+    <div class="rupee" id="amt-disp">₹0</div>
+    <div class="hint" id="amt-hint">–</div>
+  </div>
+  <div class="numpad" id="numpad"></div>
+</div>
+
+<!-- SCREEN: Mixed split -->
+<div id="s-split" class="screen">
+  <button class="back-btn" onclick="showScreen('s-amt')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    Back
+  </button>
+  <div class="label">Mark each item — house or personal?</div>
+  <div class="split-container" id="split-items"></div>
+  <div class="split-totals">
+    <div class="split-total-item">
+      <div class="stl">🏠 House</div>
+      <div class="stv" id="st-house" style="color:var(--house)">₹0</div>
+    </div>
+    <div class="split-total-item">
+      <div class="stl">👤 Personal</div>
+      <div class="stv" id="st-personal" style="color:var(--personal)">₹0</div>
+    </div>
+  </div>
+  <button class="action-btn" id="split-done" onclick="goConfirmFromSplit()">Confirm split →</button>
+</div>
+
+<!-- SCREEN: Confirm -->
+<div id="s-confirm" class="screen">
+  <button class="back-btn" id="confirm-back" onclick="goBackFromConfirm()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    Back
+  </button>
+  <div class="label">Confirm & log</div>
+  <div class="confirm-card" id="confirm-details"></div>
+  <div class="error-banner" id="err-banner">Could not save. Check your connection and try again.</div>
+  <button class="action-btn" id="confirm-btn" onclick="logExpense()">Log expense ✓</button>
+</div>
+
+<!-- SCREEN: Success -->
+<div id="s-success" class="screen">
+  <div class="success-wrap">
+    <div class="success-ring" id="succ-ring">✓</div>
+    <div class="success-title" id="succ-title">Logged!</div>
+    <div class="success-sub" id="succ-sub"></div>
+  </div>
+  <button class="action-btn" id="succ-btn" onclick="showScreen('s-pick')">Log another</button>
+</div>
+
+<!-- SCREEN: Summary -->
+<div id="s-summary" class="screen">
+  <div class="top-bar">
+    <h1>Summary</h1>
+    <button class="back-btn" onclick="showScreen('s-pick')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="month-tabs" id="month-tabs"></div>
+  <div id="summary-people"></div>
+  <div class="house-card">
+    <div class="hc-label">TOTAL HOUSE EXPENSES</div>
+    <div class="hc-amt" id="house-total">₹0</div>
+  </div>
+  <div class="label">Recent entries</div>
+  <div class="log-list" id="log-list"></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://promiulvnkedlvaoidgv.supabase.co/rest/v1/';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByb21pdWx2bmtlZGx2YW9pZGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNzg0NDAsImV4cCI6MjA5NTk1NDQ0MH0.hbpRxJlJ-HBSI7DPZuRRYOVGc8Sp1M9sx44kcPny-Yc';
+const BUDGET = 5000;
+const CLRS = { Navneil: 'nav', Simran: 'sim', Lakshay: 'lak' };
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+let state = {
+  person: '', clr: '',
+  cat: '',
+  amtStr: '0',
+  splitItems: [],
+  pendingHouse: 0,
+  pendingPersonal: 0,
+  viewMonth: getCurrentMonthKey()
+};
+
+function getCurrentMonthKey() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+function monthLabel(key) {
+  const [y, m] = key.split('-');
+  return MONTHS[parseInt(m)-1] + ' ' + y;
+}
+
+async function supaFetch(path, method='GET', body=null) {
+  const opts = { method, headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': method === 'POST' ? 'return=minimal' : '' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, opts);
+  if (!res.ok) throw new Error(await res.text());
+  const txt = await res.text();
+  return txt ? JSON.parse(txt) : null;
+}
+
+function loader(show, text='Saving...') {
+  document.getElementById('loader').classList.toggle('show', show);
+  document.getElementById('loader-text').textContent = text;
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 's-pick') refreshPickSummary();
+  if (id === 's-summary') loadSummary();
+}
+
+function pick(name, clr) {
+  state.person = name; state.clr = clr; state.amtStr = '0'; state.cat = '';
+  document.getElementById('cat-label').textContent = name + ' — what kind of expense?';
+  ['house','personal','mixed'].forEach(c => document.getElementById('cb-'+c).classList.remove('sel'));
+  showScreen('s-cat');
+}
+
+function pickCat(cat) {
+  state.cat = cat; state.amtStr = '0';
+  ['house','personal','mixed'].forEach(c => document.getElementById('cb-'+c).classList.remove('sel'));
+  document.getElementById('cb-'+cat).classList.add('sel');
+  buildNumpad();
+  updateAmt();
+  showScreen('s-amt');
+}
+
+function buildNumpad() {
+  const keys = ['1','2','3','4','5','6','7','8','9','⌫','0','→'];
+  document.getElementById('numpad').innerHTML = keys.map(k => {
+    if (k==='⌫') return `<button class="nkey del" onclick="nk('del')">⌫</button>`;
+    if (k==='→') return `<button class="nkey go ${state.clr}" onclick="nk('ok')">→</button>`;
+    return `<button class="nkey" onclick="nk('${k}')">${k}</button>`;
+  }).join('');
+}
+
+function nk(k) {
+  if (k==='del') state.amtStr = state.amtStr.length > 1 ? state.amtStr.slice(0,-1) : '0';
+  else if (k==='ok') { proceedAmt(); return; }
+  else state.amtStr = state.amtStr === '0' ? k : (state.amtStr.length < 6 ? state.amtStr + k : state.amtStr);
+  updateAmt();
+}
+
+function updateAmt() {
+  const amt = parseInt(state.amtStr)||0;
+  document.getElementById('amt-disp').textContent = '₹' + amt.toLocaleString('en-IN');
+  const hints = { house: 'goes to house pool — your ₹5k untouched', personal: 'deducted from your ₹5,000 budget', mixed: "you'll split items next" };
+  document.getElementById('amt-hint').textContent = hints[state.cat];
+}
+
+function proceedAmt() {
+  const amt = parseInt(state.amtStr)||0;
+  if (amt <= 0) return;
+  if (state.cat === 'mixed') { buildSplitUI(amt); showScreen('s-split'); }
+  else {
+    state.pendingHouse = state.cat === 'house' ? amt : 0;
+    state.pendingPersonal = state.cat === 'personal' ? amt : 0;
+    buildConfirmUI(); showScreen('s-confirm');
+  }
+}
+
+function buildSplitUI(total) {
+  const n = Math.max(2, Math.min(total > 500 ? 4 : 2, 5));
+  const share = Math.floor(total / n);
+  state.splitItems = Array.from({length:n}, (_,i) => ({
+    label: 'Item ' + (i+1),
+    amount: i < n-1 ? share : total - share*(n-1),
+    type: 'house'
+  }));
+  renderSplit(total);
+  document.getElementById('split-done').className = `action-btn ${state.clr}`;
+}
+
+function renderSplit(total) {
+  document.getElementById('split-items').innerHTML = state.splitItems.map((it,i) => `
+    <div class="split-row">
+      <div class="split-label">${it.label}</div>
+      <div class="split-toggle">
+        <button class="${it.type==='house'?'ah':''}" onclick="stType(${i},'house')">House</button>
+        <button class="${it.type==='personal'?'ap':''}" onclick="stType(${i},'personal')">Mine</button>
+      </div>
+      <input class="split-amt" type="number" value="${it.amount}" min="0" onchange="stAmt(${i},this.value)"/>
+    </div>
+  `).join('');
+  updateSplitTotals();
+}
+
+function stType(i, type) { state.splitItems[i].type = type; renderSplit(parseInt(state.amtStr)||0); }
+function stAmt(i, v) { state.splitItems[i].amount = parseInt(v)||0; updateSplitTotals(); }
+
+function updateSplitTotals() {
+  const h = state.splitItems.filter(x=>x.type==='house').reduce((s,x)=>s+x.amount,0);
+  const p = state.splitItems.filter(x=>x.type==='personal').reduce((s,x)=>s+x.amount,0);
+  document.getElementById('st-house').textContent = '₹'+h.toLocaleString('en-IN');
+  document.getElementById('st-personal').textContent = '₹'+p.toLocaleString('en-IN');
+  state.pendingHouse = h; state.pendingPersonal = p;
+}
+
+function goConfirmFromSplit() { buildConfirmUI(); showScreen('s-confirm'); }
+function goBackFromConfirm() { showScreen(state.cat === 'mixed' ? 's-split' : 's-amt'); }
+
+function buildConfirmUI() {
+  document.getElementById('confirm-btn').className = `action-btn ${state.clr}`;
+  document.getElementById('err-banner').classList.remove('show');
+  let html = `
+    <div class="confirm-row"><span class="cl">Person</span><span class="cv">${state.person}</span></div>
+    <div class="confirm-row"><span class="cl">Total</span><span class="cv" style="font-family:'DM Mono',monospace;">₹${(state.pendingHouse+state.pendingPersonal).toLocaleString('en-IN')}</span></div>`;
+  if (state.pendingHouse > 0) html += `<div class="confirm-row"><span class="cl">House expense</span><span class="cv"><span class="badge h">₹${state.pendingHouse.toLocaleString('en-IN')}</span></span></div>`;
+  if (state.pendingPersonal > 0) html += `<div class="confirm-row"><span class="cl">Personal (from ₹5k)</span><span class="cv"><span class="badge p">₹${state.pendingPersonal.toLocaleString('en-IN')}</span></span></div>`;
+  document.getElementById('confirm-details').innerHTML = html;
+}
+
+async function logExpense() {
+  const btn = document.getElementById('confirm-btn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  document.getElementById('err-banner').classList.remove('show');
+  loader(true, 'Saving expense...');
+  try {
+    await supaFetch('expenses', 'POST', {
+      person: state.person,
+      house_amount: state.pendingHouse,
+      personal_amount: state.pendingPersonal,
+      month_key: getCurrentMonthKey(),
+      logged_at: new Date().toISOString()
+    });
+    loader(false);
+    document.getElementById('succ-ring').className = `success-ring ${state.clr}`;
+    document.getElementById('succ-title').textContent = 'Logged for ' + state.person + '!';
+    const parts = [];
+    if (state.pendingHouse > 0) parts.push('₹' + state.pendingHouse.toLocaleString('en-IN') + ' → house pool');
+    if (state.pendingPersonal > 0) parts.push('₹' + state.pendingPersonal.toLocaleString('en-IN') + ' → personal');
+    document.getElementById('succ-sub').textContent = parts.join('\n');
+    document.getElementById('succ-btn').className = `action-btn ${state.clr}`;
+    showScreen('s-success');
+  } catch(e) {
+    loader(false);
+    document.getElementById('err-banner').classList.add('show');
+  }
+  btn.disabled = false; btn.textContent = 'Log expense ✓';
+}
+
+async function loadSummary() {
+  loader(true, 'Loading summary...');
+  try {
+    const all = await supaFetch(`expenses?select=*&order=logged_at.desc`);
+    loader(false);
+    const months = [...new Set(all.map(e=>e.month_key))].sort().reverse().slice(0,6);
+    if (!months.includes(state.viewMonth)) state.viewMonth = months[0] || getCurrentMonthKey();
+    renderMonthTabs(months);
+    renderSummaryForMonth(all, state.viewMonth);
+  } catch(e) {
+    loader(false);
+  }
+}
+
+function renderMonthTabs(months) {
+  document.getElementById('month-tabs').innerHTML = months.map(m =>
+    `<button class="month-tab ${m===state.viewMonth?'active':''}" onclick="switchMonth('${m}')">${monthLabel(m)}</button>`
+  ).join('');
+}
+
+function switchMonth(m) {
+  state.viewMonth = m;
+  loadSummary();
+}
+
+function renderSummaryForMonth(all, monthKey) {
+  const rows = all.filter(e=>e.month_key===monthKey);
+  const cfgs = [
+    {name:'Navneil',clr:'nav',fill:'var(--nav)',bg:'var(--nav-bg)'},
+    {name:'Simran',clr:'sim',fill:'var(--sim)',bg:'var(--sim-bg)'},
+    {name:'Lakshay',clr:'lak',fill:'var(--lak)',bg:'var(--lak-bg)'}
+  ];
+  const peoplEl = document.getElementById('summary-people');
+  peoplEl.innerHTML = cfgs.map(c => {
+    const personal = rows.filter(r=>r.person===c.name).reduce((s,r)=>s+r.personal_amount,0);
+    const pct = Math.min(100, Math.round((personal/BUDGET)*100));
+    const left = BUDGET - personal;
+    return `<div class="summary-person">
+      <div class="sp-head">
+        <div class="sp-av" style="background:${c.bg};color:${c.fill};">${c.name[0]}</div>
+        <div><div class="sp-name">${c.name}</div><div class="sp-sub">₹${personal.toLocaleString('en-IN')} personal spent</div></div>
+        <div class="sp-left" style="color:${left<500?'#e87070':'var(--text)'}">${left.toLocaleString('en-IN')} left</div>
+      </div>
+      <div class="prog"><div class="prog-fill" style="width:${pct}%;background:${c.fill};"></div></div>
+      <div class="sp-stats"><span>Budget: ₹5,000</span><span>${pct}% used</span></div>
+    </div>`;
+  }).join('');
+
+  const houseTotal = rows.reduce((s,r)=>s+r.house_amount,0);
+  document.getElementById('house-total').textContent = '₹' + houseTotal.toLocaleString('en-IN');
+
+  const logEl = document.getElementById('log-list');
+  const recent = rows.slice(0, 12);
+  logEl.innerHTML = recent.length === 0
+    ? '<div style="font-size:13px;color:var(--muted);padding:8px;">No expenses logged yet.</div>'
+    : recent.map(e => {
+        const d = new Date(e.logged_at);
+        const clr = CLRS[e.person] || 'nav';
+        const tag = e.personal_amount > 0 && e.house_amount > 0 ? 'Mixed' : e.house_amount > 0 ? 'House' : 'Personal';
+        const amt = (e.house_amount + e.personal_amount).toLocaleString('en-IN');
+        return `<div class="log-item">
+          <div class="li-dot ${clr}"></div>
+          <div class="li-name">${e.person}</div>
+          <div class="li-tag">${tag}</div>
+          <div class="li-date">${d.getDate()}/${d.getMonth()+1}</div>
+          <div class="li-amt">₹${amt}</div>
+        </div>`;
+      }).join('');
+}
+
+async function refreshPickSummary() {
+  try {
+    const mk = getCurrentMonthKey();
+    const rows = await supaFetch(`expenses?select=*&month_key=eq.${mk}`);
+    const cfgs = [
+      {name:'Navneil',clr:'nav',fill:'#7c6af7',bg:'#1e1b3a'},
+      {name:'Simran',clr:'sim',fill:'#2db87a',bg:'#0f2a1e'},
+      {name:'Lakshay',clr:'lak',fill:'#e8683a',bg:'#2a1710'}
+    ];
+    document.getElementById('pick-summary').innerHTML = cfgs.map(c => {
+      const personal = rows.filter(r=>r.person===c.name).reduce((s,r)=>s+r.personal_amount,0);
+      const left = BUDGET - personal;
+      return `<div style="background:${c.bg};border:1px solid ${c.fill}33;border-radius:var(--radius-sm);padding:10px 12px;">
+        <div style="font-size:11px;color:${c.fill};font-weight:500;margin-bottom:4px;">${c.name}</div>
+        <div style="font-size:17px;font-weight:500;font-family:'DM Mono',monospace;">₹${left.toLocaleString('en-IN')}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">left of ₹5k</div>
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
+async function handleImg(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  loader(true, 'Reading receipt with AI...');
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const b64 = e.target.result.split(',')[1];
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514', max_tokens: 800,
+          system: 'You are a receipt parser. Return ONLY valid JSON, no other text: {"items":[{"name":"string","amount":number,"type":"house or personal"}]}. Mark personal items like snacks, personal care, beverages as "personal". Everything else as "house". Amounts in Indian Rupees as numbers.',
+          messages: [{ role: 'user', content: [
+            { type: 'image', source: { type: 'base64', media_type: file.type || 'image/jpeg', data: b64 } },
+            { type: 'text', text: 'Parse this grocery/food delivery receipt.' }
+          ]}]
+        })
+      });
+      const data = await res.json();
+      const txt = data.content.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
+      const parsed = JSON.parse(txt);
+      state.splitItems = (parsed.items||[]).map(it => ({ label: it.name, amount: it.amount, type: it.type }));
+      const total = state.splitItems.reduce((s,x)=>s+x.amount, 0);
+      state.cat = 'mixed';
+      state.amtStr = String(total);
+      loader(false);
+      renderSplit(total);
+      updateSplitTotals();
+      document.getElementById('split-done').className = `action-btn ${state.clr}`;
+      showScreen('s-split');
+    } catch(err) {
+      loader(false);
+      alert('Could not read the screenshot. Please try again or enter manually.');
+    }
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+refreshPickSummary();
+</script>
+</body>
+</html>

@@ -1,1161 +1,704 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ShotTrack</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="theme-color" content="#0f0f0f"/>
+  <title>House Expenses</title>
+  <link rel="manifest" href="manifest.json"/>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
 
-<style>
-  :root {
-    --bg:        #0a0a0a;
-    --surface:   #111111;
-    --surface2:  #1a1a1a;
-    --border:    #252525;
-    --accent:    #e8ff47;
-    --accent2:   #ff6b35;
-    --text:      #f0f0f0;
-    --muted:     #666;
-    --danger:    #ff4444;
-    --success:   #44ff88;
-    --radius:    8px;
-    --mono:      'DM Mono', monospace;
-    --sans:      'DM Sans', sans-serif;
-    --display:   'Bebas Neue', sans-serif;
-  }
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --surface2: #242424;
+      --border: #2e2e2e;
+      --text: #f0f0f0;
+      --muted: #666;
+      --nav: #7c6af7;
+      --nav-bg: #1e1b3a;
+      --sim: #2db87a;
+      --sim-bg: #0f2a1e;
+      --lak: #e8683a;
+      --lak-bg: #2a1710;
+      --house: #4a9eff;
+      --house-bg: #0d1f35;
+      --personal: #f7c948;
+      --personal-bg: #2a2210;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
 
-  /* ── SCANLINE OVERLAY ── */
-  body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(255,255,255,.012) 2px,
-      rgba(255,255,255,.012) 4px
-    );
-    pointer-events: none;
-    z-index: 9999;
-  }
+    .screen { display: none; flex-direction: column; min-height: 100dvh; padding: 20px 18px 40px; gap: 16px; animation: fadeUp 0.22s ease; }
+    .screen.active { display: flex; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 
-  /* ── SCREENS ── */
-  .screen { display: none; animation: fadeUp .3s ease; }
-  .screen.active { display: block; }
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(14px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
+    .top-bar { display: flex; align-items: center; justify-content: space-between; padding-top: env(safe-area-inset-top); }
+    .top-bar h1 { font-size: 22px; font-weight: 500; letter-spacing: -0.5px; }
+    .back-btn { background: none; border: none; color: var(--muted); font-size: 13px; font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 6px 0; }
+    .back-btn svg { width: 16px; height: 16px; }
 
-  /* ── NAV BAR ── */
-  nav {
-    position: sticky; top: 0; z-index: 100;
-    background: rgba(10,10,10,.92);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--border);
-    padding: 0 24px;
-    height: 56px;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .nav-logo {
-    font-family: var(--display);
-    font-size: 24px;
-    letter-spacing: 2px;
-    color: var(--accent);
-    cursor: pointer;
-    user-select: none;
-  }
-  .nav-breadcrumb {
-    display: flex; align-items: center; gap: 8px;
-    font-family: var(--mono); font-size: 12px; color: var(--muted);
-  }
-  .nav-breadcrumb span { color: var(--text); }
-  .nav-breadcrumb .sep { color: var(--border); }
-  .nav-actions { display: flex; gap: 8px; }
+    .label { font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 
-  /* ── BUTTONS ── */
-  .btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 8px 16px; border-radius: var(--radius);
-    font-family: var(--mono); font-size: 12px; font-weight: 500;
-    border: none; cursor: pointer; transition: all .15s;
-    text-decoration: none; white-space: nowrap;
-  }
-  .btn-primary {
-    background: var(--accent); color: #000;
-  }
-  .btn-primary:hover { background: #d4e83e; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(232,255,71,.25); }
-  .btn-ghost {
-    background: transparent; color: var(--muted); border: 1px solid var(--border);
-  }
-  .btn-ghost:hover { color: var(--text); border-color: #444; }
-  .btn-danger {
-    background: transparent; color: var(--danger); border: 1px solid #330000;
-  }
-  .btn-danger:hover { background: #1a0000; }
-  .btn-sm { padding: 5px 10px; font-size: 11px; }
-  .btn-icon {
-    width: 32px; height: 32px; padding: 0; justify-content: center;
-    border-radius: 6px; font-size: 16px;
-  }
+    .person-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .person-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 10px 16px;
+      cursor: pointer;
+      text-align: center;
+      transition: transform 0.1s, border-color 0.15s;
+      color: var(--text);
+      font-family: inherit;
+    }
+    .person-btn:active { transform: scale(0.95); }
+    .person-btn.nav { border-color: var(--nav); }
+    .person-btn.sim { border-color: var(--sim); }
+    .person-btn.lak { border-color: var(--lak); }
+    .avatar {
+      width: 46px; height: 46px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; font-weight: 500; margin: 0 auto 10px;
+    }
+    .nav .avatar { background: var(--nav-bg); color: var(--nav); }
+    .sim .avatar { background: var(--sim-bg); color: var(--sim); }
+    .lak .avatar { background: var(--lak-bg); color: var(--lak); }
+    .person-name { font-size: 14px; font-weight: 500; }
 
-  /* ── CONTAINER ── */
-  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+    .cat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .cat-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 8px 14px;
+      cursor: pointer;
+      text-align: center;
+      transition: transform 0.1s, border-color 0.15s, background 0.15s;
+      color: var(--text);
+      font-family: inherit;
+    }
+    .cat-btn:active { transform: scale(0.95); }
+    .cat-icon { font-size: 24px; margin-bottom: 8px; }
+    .cat-name { font-size: 13px; font-weight: 500; }
+    .cat-desc { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.3; }
+    .cat-btn.house.sel { border-color: var(--house); background: var(--house-bg); }
+    .cat-btn.personal.sel { border-color: var(--personal); background: var(--personal-bg); }
+    .cat-btn.mixed.sel { border-color: var(--sim); background: var(--sim-bg); }
 
-  /* ── PAGE HEADER ── */
-  .page-header {
-    display: flex; align-items: flex-end; justify-content: space-between;
-    margin-bottom: 32px; padding-bottom: 20px;
-    border-bottom: 1px solid var(--border);
-  }
-  .page-title {
-    font-family: var(--display);
-    font-size: 48px; letter-spacing: 3px;
-    line-height: 1;
-  }
-  .page-subtitle { font-size: 13px; color: var(--muted); margin-top: 4px; font-family: var(--mono); }
+    .amount-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 20px;
+      text-align: center;
+    }
+    .amount-box .rupee {
+      font-family: 'DM Mono', monospace;
+      font-size: 42px;
+      font-weight: 500;
+      letter-spacing: -2px;
+      color: var(--text);
+    }
+    .amount-box .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
 
-  /* ── CARDS ── */
-  .card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
-  }
+    .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .nkey {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px;
+      font-size: 22px;
+      font-weight: 400;
+      font-family: 'DM Mono', monospace;
+      cursor: pointer;
+      text-align: center;
+      color: var(--text);
+      transition: transform 0.08s, background 0.1s;
+    }
+    .nkey:active { transform: scale(0.93); background: var(--surface2); }
+    .nkey.del { font-size: 16px; color: var(--muted); }
+    .nkey.go { font-size: 15px; font-weight: 500; font-family: 'DM Sans', sans-serif; }
+    .nkey.go.nav { background: var(--nav-bg); color: var(--nav); border-color: var(--nav); }
+    .nkey.go.sim { background: var(--sim-bg); color: var(--sim); border-color: var(--sim); }
+    .nkey.go.lak { background: var(--lak-bg); color: var(--lak); border-color: var(--lak); }
 
-  .project-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    cursor: pointer;
-    transition: all .2s;
-    position: relative; overflow: hidden;
-  }
-  .project-card::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0;
-    height: 2px;
-    background: var(--accent);
-    transform: scaleX(0); transform-origin: left;
-    transition: transform .2s;
-  }
-  .project-card:hover { border-color: #333; transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,.4); }
-  .project-card:hover::before { transform: scaleX(1); }
+    .split-container { display: flex; flex-direction: column; gap: 1px; background: var(--border); border-radius: var(--radius); overflow: hidden; }
+    .split-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface); }
+    .split-label { flex: 1; font-size: 13px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .split-toggle { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); flex-shrink: 0; }
+    .split-toggle button {
+      padding: 5px 10px; font-size: 11px; font-weight: 500;
+      border: none; cursor: pointer; background: none;
+      color: var(--muted); font-family: inherit; transition: all 0.15s;
+    }
+    .split-toggle button.ah { background: var(--house-bg); color: var(--house); }
+    .split-toggle button.ap { background: var(--personal-bg); color: var(--personal); }
+    .split-amt { width: 68px; font-family: 'DM Mono', monospace; font-size: 13px; text-align: right; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); flex-shrink: 0; }
+    .split-totals { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 14px; display: flex; gap: 16px; }
+    .split-total-item { flex: 1; }
+    .split-total-item .stl { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+    .split-total-item .stv { font-size: 15px; font-weight: 500; font-family: 'DM Mono', monospace; }
 
-  .project-card-name {
-    font-size: 16px; font-weight: 600; margin-bottom: 8px;
-  }
-  .project-card-meta {
-    font-family: var(--mono); font-size: 11px; color: var(--muted);
-  }
-  .project-card-actions {
-    display: flex; gap: 6px; margin-top: 14px; padding-top: 14px;
-    border-top: 1px solid var(--border);
-  }
+    .confirm-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .confirm-row { display: flex; justify-content: space-between; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .confirm-row:last-child { border: none; }
+    .confirm-row .cl { color: var(--muted); }
+    .confirm-row .cv { font-weight: 500; }
+    .badge { display: inline-flex; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+    .badge.h { background: var(--house-bg); color: var(--house); }
+    .badge.p { background: var(--personal-bg); color: var(--personal); }
 
-  /* ── EMPTY STATE ── */
-  .empty-state {
-    text-align: center; padding: 80px 24px;
-    color: var(--muted);
-  }
-  .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: .4; }
-  .empty-title { font-size: 18px; font-weight: 500; color: var(--text); margin-bottom: 8px; }
-  .empty-sub { font-size: 13px; margin-bottom: 24px; }
+    .action-btn {
+      width: 100%; padding: 16px; border-radius: var(--radius); border: none;
+      font-size: 16px; font-weight: 500; font-family: inherit;
+      cursor: pointer; transition: transform 0.1s, opacity 0.15s;
+    }
+    .action-btn:active { transform: scale(0.98); opacity: 0.9; }
+    .action-btn.nav { background: var(--nav); color: #fff; }
+    .action-btn.sim { background: var(--sim); color: #fff; }
+    .action-btn.lak { background: var(--lak); color: #fff; }
+    .action-btn.ghost { background: var(--surface2); color: var(--muted); }
+    .action-btn.blue { background: var(--house); color: #fff; }
 
-  /* ── MODAL ── */
-  .modal-overlay {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,.7);
-    backdrop-filter: blur(4px);
-    z-index: 1000;
-    display: none; align-items: center; justify-content: center;
-    padding: 24px;
-  }
-  .modal-overlay.open { display: flex; animation: fadeIn .2s ease; }
-  @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+    .success-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; }
+    .success-ring { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; }
+    .success-ring.nav { background: var(--nav-bg); }
+    .success-ring.sim { background: var(--sim-bg); }
+    .success-ring.lak { background: var(--lak-bg); }
+    .success-title { font-size: 22px; font-weight: 500; letter-spacing: -0.5px; }
+    .success-sub { font-size: 14px; color: var(--muted); line-height: 1.5; }
 
-  .modal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    width: 100%; max-width: 480px;
-    padding: 28px;
-    animation: slideUp .25s ease;
-  }
-  @keyframes slideUp {
-    from { transform: translateY(20px); opacity:0 }
-    to   { transform: translateY(0);    opacity:1 }
-  }
-  .modal-title {
-    font-family: var(--display);
-    font-size: 28px; letter-spacing: 2px;
-    margin-bottom: 24px;
-  }
-  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 24px; }
+    .summary-person { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+    .sp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .sp-av { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 500; flex-shrink: 0; }
+    .sp-name { font-size: 15px; font-weight: 500; }
+    .sp-sub { font-size: 12px; color: var(--muted); }
+    .sp-left { margin-left: auto; font-size: 15px; font-weight: 500; font-family: 'DM Mono', monospace; }
+    .prog { height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+    .prog-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+    .sp-stats { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
 
-  /* ── FORMS ── */
-  .form-group { margin-bottom: 18px; }
-  label {
-    display: block; font-family: var(--mono); font-size: 11px;
-    color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .08em;
-  }
-  input, select, textarea {
-    width: 100%; background: var(--bg);
-    border: 1px solid var(--border); border-radius: var(--radius);
-    color: var(--text); font-family: var(--sans); font-size: 14px;
-    padding: 10px 12px; outline: none; transition: border-color .15s;
-    appearance: none;
-  }
-  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
-  textarea { resize: vertical; min-height: 80px; }
-  select option { background: var(--surface); }
+    .house-card { background: var(--house-bg); border: 1px solid var(--house); border-radius: var(--radius); padding: 18px; text-align: center; }
+    .house-card .hc-label { font-size: 12px; color: var(--house); margin-bottom: 6px; letter-spacing: 0.05em; }
+    .house-card .hc-amt { font-size: 32px; font-weight: 500; font-family: 'DM Mono', monospace; color: var(--text); letter-spacing: -1px; }
 
-  /* ── PROJECT SCREEN TABS ── */
-  .tabs {
-    display: flex; gap: 0; margin-bottom: 28px;
-    border-bottom: 1px solid var(--border);
-  }
-  .tab {
-    padding: 10px 20px; cursor: pointer;
-    font-family: var(--mono); font-size: 12px; color: var(--muted);
-    border-bottom: 2px solid transparent; margin-bottom: -1px;
-    transition: all .15s; text-transform: uppercase; letter-spacing: .1em;
-  }
-  .tab:hover { color: var(--text); }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .log-list { display: flex; flex-direction: column; gap: 6px; }
+    .log-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface); border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 13px; }
+    .li-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .li-dot.nav { background: var(--nav); }
+    .li-dot.sim { background: var(--sim); }
+    .li-dot.lak { background: var(--lak); }
+    .li-name { font-weight: 500; min-width: 60px; }
+    .li-tag { font-size: 11px; color: var(--muted); }
+    .li-amt { margin-left: auto; font-family: 'DM Mono', monospace; font-weight: 500; }
+    .li-date { font-size: 11px; color: var(--muted); }
+    .del-btn{margin-left:8px;background:#2a1010;border:1px solid #6b2020;color:#f08080;border-radius:8px;padding:4px 8px;cursor:pointer;}
 
-  /* ── CATEGORY PILLS ── */
-  .category-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
-  .category-pill {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 100px; padding: 5px 12px;
-    font-size: 12px; font-family: var(--mono);
-    cursor: default;
-  }
-  .category-pill .del {
-    cursor: pointer; color: var(--muted); font-size: 14px; line-height: 1;
-    transition: color .15s;
-  }
-  .category-pill .del:hover { color: var(--danger); }
+    .upload-zone { border: 1px dashed var(--border); border-radius: var(--radius); padding: 22px; text-align: center; cursor: pointer; color: var(--muted); font-size: 13px; transition: border-color 0.15s; }
+    .upload-zone:active { border-color: var(--sim); }
+    .upload-icon { font-size: 26px; margin-bottom: 8px; }
 
-  /* ── SHOT CARDS ── */
-  .shot-list { display: flex; flex-direction: column; gap: 10px; }
+    .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; flex-direction: column; align-items: center; justify-content: center; gap: 16px; font-size: 14px; color: var(--muted); }
+    .loading-overlay.show { display: flex; }
+    .spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--sim); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-  .shot-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px 20px;
-    display: grid;
-    grid-template-columns: 40px 1fr auto;
-    gap: 16px; align-items: start;
-    transition: border-color .15s;
-  }
-  .shot-card:hover { border-color: #333; }
-  .shot-card.completed { opacity: .5; }
-  .shot-card.completed .shot-desc { text-decoration: line-through; color: var(--muted); }
+    .error-banner { background: #2a1010; border: 1px solid #6b2020; color: #f08080; border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13px; display: none; }
+    .error-banner.show { display: block; }
 
-  .shot-number {
-    font-family: var(--display);
-    font-size: 28px; color: var(--accent); line-height: 1;
-  }
-  .shot-body { min-width: 0; }
-  .shot-desc { font-size: 14px; margin-bottom: 8px; }
-  .shot-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-  .tag {
-    font-family: var(--mono); font-size: 10px;
-    padding: 2px 8px; border-radius: 4px;
-    border: 1px solid var(--border); color: var(--muted);
-  }
-  .tag.type  { border-color: #2a3a00; color: #aed136; }
-  .tag.scene { border-color: #002a3a; color: #36c5ed; }
-  .tag.loc   { border-color: #2a1a00; color: #e8a136; }
-  .tag.prio-high   { border-color: #3a0000; color: #ff6060; }
-  .tag.prio-medium { border-color: #2a2000; color: #e8c436; }
-  .tag.prio-low    { border-color: #002a10; color: #44d483; }
-
-  .shot-actions { display: flex; gap: 4px; flex-shrink: 0; }
-
-  /* ── STATS ROW ── */
-  .stats-row {
-    display: flex; gap: 16px; margin-bottom: 28px;
-    flex-wrap: wrap;
-  }
-  .stat-card {
-    flex: 1; min-width: 100px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 14px 18px;
-  }
-  .stat-value { font-family: var(--display); font-size: 36px; color: var(--accent); line-height: 1; }
-  .stat-label { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 2px; text-transform: uppercase; }
-
-  /* ── PROGRESS BAR ── */
-  .progress-bar {
-    height: 3px; background: var(--border); border-radius: 2px;
-    margin-bottom: 28px; overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%; background: var(--accent);
-    border-radius: 2px; transition: width .5s ease;
-  }
-
-  /* ── SEARCH ── */
-  .search-row {
-    display: flex; gap: 10px; margin-bottom: 20px; align-items: center;
-  }
-  .search-wrap { position: relative; flex: 1; }
-  .search-wrap input { padding-left: 36px; }
-  .search-icon {
-    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-    color: var(--muted); font-size: 14px; pointer-events: none;
-  }
-
-  /* ── TOAST ── */
-  #toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
-    background: var(--surface2); border: 1px solid var(--border);
-    padding: 10px 20px; border-radius: 100px;
-    font-family: var(--mono); font-size: 12px;
-    transition: transform .3s ease;
-    z-index: 9999;
-    white-space: nowrap;
-  }
-  #toast.show { transform: translateX(-50%) translateY(0); }
-
-  /* ── LOADING ── */
-  .loader {
-    display: flex; align-items: center; justify-content: center;
-    padding: 60px; color: var(--muted); font-family: var(--mono); font-size: 12px;
-    gap: 10px;
-  }
-  .spinner {
-    width: 16px; height: 16px;
-    border: 2px solid var(--border); border-top-color: var(--accent);
-    border-radius: 50%; animation: spin .6s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ── CHECKBOX ── */
-  .check-wrap { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-  .check-wrap input[type=checkbox] {
-    width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer;
-  }
-
-  /* ── DRAG HANDLE ── */
-  .drag-handle {
-    cursor: grab; color: var(--border); font-size: 16px;
-    padding: 4px; transition: color .15s;
-  }
-  .drag-handle:hover { color: var(--muted); }
-  .shot-card[draggable=true].dragging { opacity: .4; }
-
-  /* ── FILTER CHIPS ── */
-  .filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-  .filter-chip {
-    font-family: var(--mono); font-size: 11px;
-    padding: 4px 12px; border-radius: 100px;
-    border: 1px solid var(--border); color: var(--muted);
-    cursor: pointer; transition: all .15s;
-  }
-  .filter-chip.active { border-color: var(--accent); color: var(--accent); background: rgba(232,255,71,.06); }
-  .filter-chip:hover { color: var(--text); }
-</style>
+    .month-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+    .month-tab { padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 500; border: 1px solid var(--border); background: none; color: var(--muted); cursor: pointer; white-space: nowrap; font-family: inherit; transition: all 0.15s; }
+    .month-tab.active { background: var(--surface2); color: var(--text); border-color: var(--text); }
+  </style>
 </head>
 <body>
 
-<!-- NAV -->
-<nav>
-  <div class="nav-logo" onclick="goHome()">SHOTTRACK</div>
-  <div class="nav-breadcrumb" id="breadcrumb"></div>
-  <div class="nav-actions" id="nav-actions"></div>
-</nav>
-
-<!-- ════════════════════════════════════════
-     SCREEN: HOME
-═══════════════════════════════════════════ -->
-<div class="screen active" id="screen-home">
-  <div class="container">
-    <div class="page-header">
-      <div>
-        <div class="page-title">PROJECTS</div>
-        <div class="page-subtitle">// your films, organised</div>
-      </div>
-      <button class="btn btn-primary" onclick="openModal('modal-new-project')">
-        + NEW PROJECT
-      </button>
-    </div>
-    <div id="projects-loader" class="loader"><div class="spinner"></div> loading projects…</div>
-    <div class="card-grid" id="project-grid"></div>
-  </div>
+<div class="loading-overlay" id="loader">
+  <div class="spinner"></div>
+  <div id="loader-text">Saving...</div>
 </div>
 
-<!-- ════════════════════════════════════════
-     SCREEN: PROJECT
-═══════════════════════════════════════════ -->
-<div class="screen" id="screen-project">
-  <div class="container">
-    <div class="page-header">
-      <div>
-        <div class="page-title" id="proj-title">PROJECT</div>
-        <div class="page-subtitle" id="proj-subtitle"></div>
-      </div>
-    </div>
-
-    <!-- Stats row -->
-    <div class="stats-row" id="proj-stats"></div>
-
-    <!-- Progress -->
-    <div class="progress-bar"><div class="progress-fill" id="proj-progress" style="width:0%"></div></div>
-
-    <!-- Tabs -->
-    <div class="tabs">
-      <div class="tab active" onclick="switchTab('shots')">Shots</div>
-      <div class="tab" onclick="switchTab('scenes')">Scenes</div>
-      <div class="tab" onclick="switchTab('locations')">Locations</div>
-      <div class="tab" onclick="switchTab('costumes')">Costumes</div>
-      <div class="tab" onclick="switchTab('characters')">Characters</div>
-    </div>
-
-    <!-- SHOTS TAB -->
-    <div id="tab-shots">
-      <div class="search-row">
-        <div class="search-wrap">
-          <span class="search-icon">🔍</span>
-          <input type="text" id="shot-search" placeholder="Search shots…" oninput="renderShots()" />
-        </div>
-        <button class="btn btn-primary" onclick="openModal('modal-new-shot')">+ SHOT</button>
-      </div>
-      <div class="filter-row" id="shot-filters"></div>
-      <div class="shot-list" id="shot-list"></div>
-    </div>
-
-    <!-- CATEGORY TABS (scenes / locations / costumes / characters) -->
-    <div id="tab-category" style="display:none">
-      <div class="search-row">
-        <input type="text" id="cat-input" placeholder="Add new…" style="flex:1" />
-        <button class="btn btn-primary" onclick="addCategory()">+ ADD</button>
-      </div>
-      <div class="category-list" id="cat-list"></div>
-      <div id="cat-empty" class="empty-state" style="display:none">
-        <div class="empty-icon">📂</div>
-        <div class="empty-title">Nothing here yet</div>
-        <div class="empty-sub">Add your first entry above</div>
-      </div>
-    </div>
+<!-- SCREEN: Pick person -->
+<div id="s-pick" class="screen active">
+  <div class="top-bar">
+    <h1>House Expenses</h1>
+    <button class="back-btn" onclick="showScreen('s-summary')" style="font-size:12px;color:var(--muted);">
+      📊 Summary
+    </button>
   </div>
+  <div class="label">Who is logging?</div>
+  <div class="person-grid">
+    <button class="person-btn nav" onclick="pick('Navneil','nav','N')">
+      <div class="avatar">N</div>
+      <div class="person-name">Navneil</div>
+    </button>
+    <button class="person-btn sim" onclick="pick('Simran','sim','S')">
+      <div class="avatar">S</div>
+      <div class="person-name">Simran</div>
+    </button>
+    <button class="person-btn lak" onclick="pick('Lakshay','lak','L')">
+      <div class="avatar">L</div>
+      <div class="person-name">Lakshay</div>
+    </button>
+  </div>
+  <div class="label" style="margin-top:8px;">This month so far</div>
+  <div id="pick-summary" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"></div>
 </div>
 
-<!-- ════════════════════════════════════════
-     MODALS
-═══════════════════════════════════════════ -->
-
-<!-- New Project -->
-<div class="modal-overlay" id="modal-new-project">
-  <div class="modal">
-    <div class="modal-title">NEW PROJECT</div>
-    <div class="form-group">
-      <label>Project Name</label>
-      <input type="text" id="inp-project-name" placeholder="e.g. Unemployable" />
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modal-new-project')">Cancel</button>
-      <button class="btn btn-primary" onclick="createProject()">Create</button>
-    </div>
+<!-- SCREEN: Pick category -->
+<div id="s-cat" class="screen">
+  <button class="back-btn" onclick="showScreen('s-pick')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    Back
+  </button>
+  <div class="label" id="cat-label">What kind of expense?</div>
+  <div class="cat-grid">
+    <button class="cat-btn house" id="cb-house" onclick="pickCat('house')">
+      <div class="cat-icon">🏠</div>
+      <div class="cat-name">House</div>
+      <div class="cat-desc">Groceries, bills, shared</div>
+    </button>
+    <button class="cat-btn personal" id="cb-personal" onclick="pickCat('personal')">
+      <div class="cat-icon">👤</div>
+      <div class="cat-name">Personal</div>
+      <div class="cat-desc">From your ₹5,000</div>
+    </button>
+    <button class="cat-btn mixed" id="cb-mixed" onclick="pickCat('mixed')">
+      <div class="cat-icon">🔀</div>
+      <div class="cat-name">Mixed</div>
+      <div class="cat-desc">Some of both</div>
+    </button>
   </div>
+  <label class="upload-zone">
+    <div class="upload-icon">📷</div>
+    Upload Blinkit / Swiggy screenshot<br>
+    <span style="font-size:11px;">AI will read and split the items</span>
+    <input type="file" accept="image/*" style="display:none" onchange="handleImg(event)"/>
+  </label>
 </div>
 
-<!-- New Shot -->
-<div class="modal-overlay" id="modal-new-shot">
-  <div class="modal" style="max-width:560px">
-    <div class="modal-title" id="shot-modal-title">NEW SHOT</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-      <div class="form-group">
-        <label>Shot Type</label>
-        <select id="inp-shot-type">
-          <option value="">— select —</option>
-          <option>Extreme Wide</option>
-          <option>Wide Shot</option>
-          <option>Medium Shot</option>
-          <option>Medium Close Up</option>
-          <option>Close Up</option>
-          <option>Extreme Close Up</option>
-          <option>Over The Shoulder</option>
-          <option>Point of View</option>
-          <option>Insert</option>
-          <option>Cutaway</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Camera Movement</label>
-        <select id="inp-movement">
-          <option value="">— select —</option>
-          <option>Static</option>
-          <option>Pan Left</option>
-          <option>Pan Right</option>
-          <option>Tilt Up</option>
-          <option>Tilt Down</option>
-          <option>Push In</option>
-          <option>Pull Out</option>
-          <option>Track Left</option>
-          <option>Track Right</option>
-          <option>Handheld</option>
-          <option>Crane Up</option>
-          <option>Crane Down</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Scene</label>
-        <select id="inp-scene"><option value="">— select —</option></select>
-      </div>
-      <div class="form-group">
-        <label>Location</label>
-        <select id="inp-location"><option value="">— select —</option></select>
-      </div>
-      <div class="form-group">
-        <label>Costume</label>
-        <select id="inp-costume"><option value="">— select —</option></select>
-      </div>
-      <div class="form-group">
-        <label>Priority</label>
-        <select id="inp-priority">
-          <option value="">— none —</option>
-          <option>High</option>
-          <option>Medium</option>
-          <option>Low</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Description</label>
-      <textarea id="inp-description" placeholder="What happens in this shot…"></textarea>
-    </div>
-    <div class="form-group">
-      <label class="check-wrap">
-        <input type="checkbox" id="inp-completed" />
-        Mark as completed
-      </label>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modal-new-shot')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveShot()">Save Shot</button>
-    </div>
+<!-- SCREEN: Amount numpad -->
+<div id="s-amt" class="screen">
+  <button class="back-btn" onclick="showScreen('s-cat')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    Back
+  </button>
+  <div class="amount-box">
+    <div class="rupee" id="amt-disp">₹0</div>
+    <div class="hint" id="amt-hint">–</div>
   </div>
+  <div class="numpad" id="numpad"></div>
 </div>
 
-<!-- Confirm Delete -->
-<div class="modal-overlay" id="modal-confirm">
-  <div class="modal" style="max-width:380px">
-    <div class="modal-title">DELETE?</div>
-    <p style="color:var(--muted);font-size:14px;margin-bottom:4px">This cannot be undone.</p>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modal-confirm')">Cancel</button>
-      <button class="btn btn-danger" id="confirm-ok-btn">Delete</button>
+<!-- SCREEN: Mixed split -->
+<div id="s-split" class="screen">
+  <button class="back-btn" onclick="showScreen('s-amt')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    Back
+  </button>
+  <div class="label">Mark each item — house or personal?</div>
+  <div class="split-container" id="split-items"></div>
+  <div class="split-totals">
+    <div class="split-total-item">
+      <div class="stl">🏠 House</div>
+      <div class="stv" id="st-house" style="color:var(--house)">₹0</div>
+    </div>
+    <div class="split-total-item">
+      <div class="stl">👤 Personal</div>
+      <div class="stv" id="st-personal" style="color:var(--personal)">₹0</div>
     </div>
   </div>
+  <button class="action-btn" id="split-done" onclick="goConfirmFromSplit()">Confirm split →</button>
 </div>
 
-<!-- Toast -->
-<div id="toast"></div>
+<!-- SCREEN: Confirm -->
+<div id="s-confirm" class="screen">
+  <button class="back-btn" id="confirm-back" onclick="goBackFromConfirm()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    Back
+  </button>
+  <div class="label">Confirm & log</div>
+  <div class="confirm-card" id="confirm-details"></div>
 
-<!-- ════════════════════════════════════════
-     SUPABASE CONFIG — REPLACE THESE
-═══════════════════════════════════════════ -->
-<script>
-const SUPABASE_URL = 'https://qhezulfzcqwodklawdev.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFoZXp1bGZ6Y3F3b2RrbGF3ZGV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0Njc0NDgsImV4cCI6MjA5NjA0MzQ0OH0.iOzQKmonG3kg1Qqb_5d1OE9yOqqTpSrZmkx5YDX9Ulc';
-</script>
+  <textarea id="description"
+    placeholder="Optional description (Diet Coke, Blinkit groceries, Electricity bill...)"
+    style="width:100%;min-height:80px;background:#1a1a1a;border:1px solid #2e2e2e;border-radius:12px;color:white;padding:12px;font-family:inherit;resize:none;"></textarea>
+
+  <div class="error-banner" id="err-banner">Could not save. Check your connection and try again.</div>
+  <button class="action-btn" id="confirm-btn" onclick="logExpense()">Log expense ✓</button>
+</div>
+
+<!-- SCREEN: Success -->
+<div id="s-success" class="screen">
+  <div class="success-wrap">
+    <div class="success-ring" id="succ-ring">✓</div>
+    <div class="success-title" id="succ-title">Logged!</div>
+    <div class="success-sub" id="succ-sub"></div>
+  </div>
+  <button class="action-btn" id="succ-btn" onclick="showScreen('s-pick')">Log another</button>
+</div>
+
+<!-- SCREEN: Summary -->
+<div id="s-summary" class="screen">
+  <div class="top-bar">
+    <h1>Summary</h1>
+    <button class="back-btn" onclick="showScreen('s-pick')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="month-tabs" id="month-tabs"></div>
+  <div id="summary-people"></div>
+  <div class="house-card">
+    <div class="hc-label">TOTAL HOUSE EXPENSES</div>
+    <div class="hc-amt" id="house-total">₹0</div>
+  </div>
+  <div class="label">Recent entries</div>
+  <div class="log-list" id="log-list"></div>
+</div>
 
 <script>
-// ════════════════════════════════════════════
-//   SUPABASE MINI-CLIENT
-// ════════════════════════════════════════════
-const sb = {
-  headers: {
-    'apikey': SUPABASE_KEY,
-    'Authorization': `Bearer ${SUPABASE_KEY}`,
-    'Content-Type': 'application/json',
-    'Prefer': 'return=representation'
-  },
-  url(table, params='') {
-    return `${SUPABASE_URL}/rest/v1/${table}${params}`;
-  },
-  async get(table, params='') {
-    const r = await fetch(this.url(table, params), { headers: this.headers });
-    if (!r.ok) throw await r.json();
-    return r.json();
-  },
-  async post(table, body) {
-    const r = await fetch(this.url(table), {
-      method: 'POST', headers: this.headers,
-      body: JSON.stringify(body)
-    });
-    if (!r.ok) throw await r.json();
-    return r.json();
-  },
-  async patch(table, id, body) {
-    const r = await fetch(this.url(table, `?id=eq.${id}`), {
-      method: 'PATCH', headers: this.headers,
-      body: JSON.stringify(body)
-    });
-    if (!r.ok) throw await r.json();
-    return r.json();
-  },
-  async delete(table, id) {
-    const r = await fetch(this.url(table, `?id=eq.${id}`), {
-      method: 'DELETE', headers: this.headers
-    });
-    if (!r.ok) throw await r.json();
-    return true;
-  }
-};
+const SUPABASE_URL = 'https://promiulvnkedlvaoidgv.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByb21pdWx2bmtlZGx2YW9pZGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNzg0NDAsImV4cCI6MjA5NTk1NDQ0MH0.hbpRxJlJ-HBSI7DPZuRRYOVGc8Sp1M9sx44kcPny-Yc';
+const BUDGET = 5000;
+const CLRS = { Navneil: 'nav', Simran: 'sim', Lakshay: 'lak' };
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-// ════════════════════════════════════════════
-//   APP STATE
-// ════════════════════════════════════════════
 let state = {
-  projects:   [],
-  currentProject: null,
-  shots:      [],
-  categories: {},   // { scenes:[], locations:[], costumes:[], characters:[] }
-  activeTab:  'shots',
-  editingShot: null,
-  shotFilter: null,
+  person: '', clr: '',
+  cat: '',
+  amtStr: '0',
+  splitItems: [],
+  pendingHouse: 0,
+  pendingPersonal: 0,
+  viewMonth: getCurrentMonthKey()
 };
 
-// ════════════════════════════════════════════
-//   NAVIGATION
-// ════════════════════════════════════════════
+function getCurrentMonthKey() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+function monthLabel(key) {
+  const [y, m] = key.split('-');
+  return MONTHS[parseInt(m)-1] + ' ' + y;
+}
+
+async function supaFetch(path, method='GET', body=null) {
+  const opts = { method, headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': method === 'POST' ? 'return=minimal' : '' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, opts);
+  if (!res.ok) throw new Error(await res.text());
+  const txt = await res.text();
+  return txt ? JSON.parse(txt) : null;
+}
+
+function loader(show, text='Saving...') {
+  document.getElementById('loader').classList.toggle('show', show);
+  document.getElementById('loader-text').textContent = text;
+}
+
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-' + id).classList.add('active');
+  document.getElementById(id).classList.add('active');
+  if (id === 's-pick') refreshPickSummary();
+  if (id === 's-summary') loadSummary();
 }
 
-function goHome() {
-  state.currentProject = null;
-  updateNav('home');
-  showScreen('home');
-  loadProjects();
+function pick(name, clr) {
+  state.person = name; state.clr = clr; state.amtStr = '0'; state.cat = '';
+  document.getElementById('cat-label').textContent = name + ' — what kind of expense?';
+  ['house','personal','mixed'].forEach(c => document.getElementById('cb-'+c).classList.remove('sel'));
+  showScreen('s-cat');
 }
 
-function updateNav(context) {
-  const bc = document.getElementById('breadcrumb');
-  const na = document.getElementById('nav-actions');
-  if (context === 'home') {
-    bc.innerHTML = '';
-    na.innerHTML = '';
-  } else if (context === 'project') {
-    bc.innerHTML = `
-      <span style="cursor:pointer;color:var(--muted)" onclick="goHome()">Projects</span>
-      <span class="sep">›</span>
-      <span>${state.currentProject.name}</span>
-    `;
-    na.innerHTML = `
-      <button class="btn btn-ghost btn-sm" onclick="confirmDelete('project', '${state.currentProject.id}')">Delete Project</button>
-    `;
+function pickCat(cat) {
+  state.cat = cat; state.amtStr = '0';
+  ['house','personal','mixed'].forEach(c => document.getElementById('cb-'+c).classList.remove('sel'));
+  document.getElementById('cb-'+cat).classList.add('sel');
+  buildNumpad();
+  updateAmt();
+  showScreen('s-amt');
+}
+
+function buildNumpad() {
+  const keys = ['1','2','3','4','5','6','7','8','9','⌫','0','→'];
+  document.getElementById('numpad').innerHTML = keys.map(k => {
+    if (k==='⌫') return `<button class="nkey del" onclick="nk('del')">⌫</button>`;
+    if (k==='→') return `<button class="nkey go ${state.clr}" onclick="nk('ok')">→</button>`;
+    return `<button class="nkey" onclick="nk('${k}')">${k}</button>`;
+  }).join('');
+}
+
+function nk(k) {
+  if (k==='del') state.amtStr = state.amtStr.length > 1 ? state.amtStr.slice(0,-1) : '0';
+  else if (k==='ok') { proceedAmt(); return; }
+  else state.amtStr = state.amtStr === '0' ? k : (state.amtStr.length < 6 ? state.amtStr + k : state.amtStr);
+  updateAmt();
+}
+
+function updateAmt() {
+  const amt = parseInt(state.amtStr)||0;
+  document.getElementById('amt-disp').textContent = '₹' + amt.toLocaleString('en-IN');
+  const hints = { house: 'goes to house pool — your ₹5k untouched', personal: 'deducted from your ₹5,000 budget', mixed: "you'll split items next" };
+  document.getElementById('amt-hint').textContent = hints[state.cat];
+}
+
+function proceedAmt() {
+  const amt = parseInt(state.amtStr)||0;
+  if (amt <= 0) return;
+  if (state.cat === 'mixed') { buildSplitUI(amt); showScreen('s-split'); }
+  else {
+    state.pendingHouse = state.cat === 'house' ? amt : 0;
+    state.pendingPersonal = state.cat === 'personal' ? amt : 0;
+    buildConfirmUI(); showScreen('s-confirm');
   }
 }
 
-// ════════════════════════════════════════════
-//   MODAL HELPERS
-// ════════════════════════════════════════════
-function openModal(id) {
-  document.getElementById(id).classList.add('open');
-}
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-}
-document.querySelectorAll('.modal-overlay').forEach(o => {
-  o.addEventListener('click', e => {
-    if (e.target === o) o.classList.remove('open');
-  });
-});
-
-// ════════════════════════════════════════════
-//   TOAST
-// ════════════════════════════════════════════
-let toastTimer;
-function toast(msg, color='var(--accent)') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.color = color;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+function buildSplitUI(total) {
+  const n = Math.max(2, Math.min(total > 500 ? 4 : 2, 5));
+  const share = Math.floor(total / n);
+  state.splitItems = Array.from({length:n}, (_,i) => ({
+    label: 'Item ' + (i+1),
+    amount: i < n-1 ? share : total - share*(n-1),
+    type: 'house'
+  }));
+  renderSplit(total);
+  document.getElementById('split-done').className = `action-btn ${state.clr}`;
 }
 
-// ════════════════════════════════════════════
-//   CONFIRM DELETE
-// ════════════════════════════════════════════
-function confirmDelete(type, id, extra) {
-  openModal('modal-confirm');
-  document.getElementById('confirm-ok-btn').onclick = () => {
-    closeModal('modal-confirm');
-    if (type === 'project') deleteProject(id);
-    else if (type === 'shot') deleteShot(id);
-    else if (type === 'category') deleteCat(id);
-  };
-}
-
-// ════════════════════════════════════════════
-//   PROJECTS
-// ════════════════════════════════════════════
-async function loadProjects() {
-  const grid = document.getElementById('project-grid');
-  const loader = document.getElementById('projects-loader');
-  grid.innerHTML = '';
-  loader.style.display = 'flex';
-
-  try {
-    state.projects = await sb.get('projects', '?order=created_at.desc');
-  } catch(e) {
-    loader.innerHTML = `<span style="color:var(--danger)">⚠ ${e.message || 'Connection error — check Supabase config'}</span>`;
-    return;
-  }
-  loader.style.display = 'none';
-
-  if (!state.projects.length) {
-    grid.innerHTML = `
-      <div class="empty-state" style="grid-column:1/-1">
-        <div class="empty-icon">🎬</div>
-        <div class="empty-title">No projects yet</div>
-        <div class="empty-sub">Start by creating your first film project</div>
-        <button class="btn btn-primary" onclick="openModal('modal-new-project')">+ NEW PROJECT</button>
-      </div>`;
-    return;
-  }
-
-  state.projects.forEach(p => {
-    const d = new Date(p.created_at).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'});
-    const card = document.createElement('div');
-    card.className = 'project-card';
-    card.innerHTML = `
-      <div class="project-card-name">${esc(p.name)}</div>
-      <div class="project-card-meta">Created ${d}</div>
-      <div class="project-card-actions">
-        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="openProject('${p.id}')">Open →</button>
-        <button class="btn btn-danger btn-sm" onclick="confirmDelete('project','${p.id}')">✕</button>
-      </div>`;
-    grid.appendChild(card);
-  });
-}
-
-async function createProject() {
-  const name = document.getElementById('inp-project-name').value.trim();
-  if (!name) return toast('Enter a project name', 'var(--danger)');
-  try {
-    const [proj] = await sb.post('projects', { name });
-    closeModal('modal-new-project');
-    document.getElementById('inp-project-name').value = '';
-    toast('✓ Project created');
-    await loadProjects();
-  } catch(e) {
-    toast('Error: ' + (e.message || 'unknown'), 'var(--danger)');
-  }
-}
-
-async function deleteProject(id) {
-  try {
-    // cascade-delete shots + categories
-    const shots = await sb.get('shots', `?project_id=eq.${id}`);
-    for (const s of shots) await sb.delete('shots', s.id);
-    const cats = await sb.get('categories', `?project_id=eq.${id}`);
-    for (const c of cats) await sb.delete('categories', c.id);
-    await sb.delete('projects', id);
-    toast('Project deleted');
-    goHome();
-  } catch(e) {
-    toast('Delete failed', 'var(--danger)');
-  }
-}
-
-// ════════════════════════════════════════════
-//   OPEN PROJECT
-// ════════════════════════════════════════════
-async function openProject(id) {
-  state.currentProject = state.projects.find(p => p.id === id);
-  updateNav('project');
-  showScreen('project');
-
-  document.getElementById('proj-title').textContent = state.currentProject.name.toUpperCase();
-  document.getElementById('proj-subtitle').textContent = `// project id: ${id.slice(0,8)}`;
-
-  switchTab('shots');
-  await Promise.all([loadShots(), loadAllCategories()]);
-}
-
-// ════════════════════════════════════════════
-//   TABS
-// ════════════════════════════════════════════
-const CAT_TYPES = ['scenes', 'locations', 'costumes', 'characters'];
-
-function switchTab(tab) {
-  state.activeTab = tab;
-  document.querySelectorAll('.tab').forEach((el, i) => {
-    const names = ['shots', ...CAT_TYPES];
-    el.classList.toggle('active', names[i] === tab);
-  });
-
-  document.getElementById('tab-shots').style.display    = tab === 'shots' ? 'block' : 'none';
-  document.getElementById('tab-category').style.display = tab !== 'shots' ? 'block' : 'none';
-
-  if (tab !== 'shots') renderCategory(tab);
-}
-
-// ════════════════════════════════════════════
-//   SHOTS
-// ════════════════════════════════════════════
-async function loadShots() {
-  const pid = state.currentProject.id;
-  state.shots = await sb.get('shots', `?project_id=eq.${pid}&order=story_order.asc,created_at.asc`);
-  renderShots();
-  updateStats();
-}
-
-function renderShots() {
-  const q = (document.getElementById('shot-search')?.value || '').toLowerCase();
-  const f = state.shotFilter;
-
-  let shots = state.shots.filter(s => {
-    if (q && !JSON.stringify(s).toLowerCase().includes(q)) return false;
-    if (f === 'completed'   && !s.completed) return false;
-    if (f === 'incomplete'  &&  s.completed) return false;
-    if (f === 'high'        && s.priority?.toLowerCase() !== 'high') return false;
-    return true;
-  });
-
-  const list = document.getElementById('shot-list');
-  list.innerHTML = '';
-
-  if (!shots.length) {
-    list.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">🎥</div>
-        <div class="empty-title">No shots yet</div>
-        <div class="empty-sub">Add your first shot to get started</div>
-      </div>`;
-    return;
-  }
-
-  // Rebuild filter chips
-  const filterRow = document.getElementById('shot-filters');
-  const chips = [
-    { label: 'All',        val: null        },
-    { label: '✓ Done',     val: 'completed' },
-    { label: '● Remaining',val: 'incomplete'},
-    { label: '▲ High Priority', val: 'high' },
-  ];
-  filterRow.innerHTML = chips.map(c => `
-    <span class="filter-chip ${state.shotFilter === c.val ? 'active':''}"
-      onclick="setFilter(${c.val === null ? 'null' : `'${c.val}'`})">${c.label}</span>
-  `).join('');
-
-  shots.forEach((shot, i) => {
-    const card = document.createElement('div');
-    card.className = 'shot-card' + (shot.completed ? ' completed' : '');
-    card.draggable = true;
-    card.dataset.id = shot.id;
-
-    const tags = [
-      shot.shot_type  ? `<span class="tag type">${esc(shot.shot_type)}</span>` : '',
-      shot.movement   ? `<span class="tag">${esc(shot.movement)}</span>` : '',
-      shot.scene      ? `<span class="tag scene">S: ${esc(shot.scene)}</span>` : '',
-      shot.location   ? `<span class="tag loc">📍 ${esc(shot.location)}</span>` : '',
-      shot.clothes    ? `<span class="tag">👔 ${esc(shot.clothes)}</span>` : '',
-      shot.priority   ? `<span class="tag prio-${(shot.priority||'').toLowerCase()}">${esc(shot.priority)}</span>` : '',
-    ].filter(Boolean).join('');
-
-    card.innerHTML = `
-      <div class="shot-number">${shot.shot_no || (i + 1)}</div>
-      <div class="shot-body">
-        <div class="shot-desc">${esc(shot.description || '—')}</div>
-        <div class="shot-tags">${tags}</div>
+function renderSplit(total) {
+  document.getElementById('split-items').innerHTML = state.splitItems.map((it,i) => `
+    <div class="split-row">
+      <div class="split-label">${it.label}</div>
+      <div class="split-toggle">
+        <button class="${it.type==='house'?'ah':''}" onclick="stType(${i},'house')">House</button>
+        <button class="${it.type==='personal'?'ap':''}" onclick="stType(${i},'personal')">Mine</button>
       </div>
-      <div class="shot-actions">
-        <button class="btn btn-icon btn-ghost" title="${shot.completed ? 'Mark incomplete' : 'Mark complete'}"
-          onclick="toggleComplete('${shot.id}', ${shot.completed})">${shot.completed ? '↩' : '✓'}</button>
-        <button class="btn btn-icon btn-ghost" title="Edit" onclick="editShot('${shot.id}')">✏</button>
-        <button class="btn btn-icon btn-danger" title="Delete" onclick="confirmDelete('shot','${shot.id}')">✕</button>
+      <input class="split-amt" type="number" value="${it.amount}" min="0" onchange="stAmt(${i},this.value)"/>
+    </div>
+  `).join('');
+  updateSplitTotals();
+}
+
+function stType(i, type) { state.splitItems[i].type = type; renderSplit(parseInt(state.amtStr)||0); }
+function stAmt(i, v) { state.splitItems[i].amount = parseInt(v)||0; updateSplitTotals(); }
+
+function updateSplitTotals() {
+  const h = state.splitItems.filter(x=>x.type==='house').reduce((s,x)=>s+x.amount,0);
+  const p = state.splitItems.filter(x=>x.type==='personal').reduce((s,x)=>s+x.amount,0);
+  document.getElementById('st-house').textContent = '₹'+h.toLocaleString('en-IN');
+  document.getElementById('st-personal').textContent = '₹'+p.toLocaleString('en-IN');
+  state.pendingHouse = h; state.pendingPersonal = p;
+}
+
+function goConfirmFromSplit() { buildConfirmUI(); showScreen('s-confirm'); }
+function goBackFromConfirm() { showScreen(state.cat === 'mixed' ? 's-split' : 's-amt'); }
+
+function buildConfirmUI() {
+  document.getElementById('confirm-btn').className = `action-btn ${state.clr}`;
+  document.getElementById('err-banner').classList.remove('show');
+  let html = `
+    <div class="confirm-row"><span class="cl">Person</span><span class="cv">${state.person}</span></div>
+    <div class="confirm-row"><span class="cl">Total</span><span class="cv" style="font-family:'DM Mono',monospace;">₹${(state.pendingHouse+state.pendingPersonal).toLocaleString('en-IN')}</span></div>`;
+  if (state.pendingHouse > 0) html += `<div class="confirm-row"><span class="cl">House expense</span><span class="cv"><span class="badge h">₹${state.pendingHouse.toLocaleString('en-IN')}</span></span></div>`;
+  if (state.pendingPersonal > 0) html += `<div class="confirm-row"><span class="cl">Personal (from ₹5k)</span><span class="cv"><span class="badge p">₹${state.pendingPersonal.toLocaleString('en-IN')}</span></span></div>`;
+  document.getElementById('confirm-details').innerHTML = html;
+}
+
+async function logExpense() {
+  const btn = document.getElementById('confirm-btn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  document.getElementById('err-banner').classList.remove('show');
+  loader(true, 'Saving expense...');
+  try {
+    await supaFetch('expenses', 'POST', {
+      person: state.person,
+      house_amount: state.pendingHouse,
+      personal_amount: state.pendingPersonal,
+      description: document.getElementById('description').value.trim(),
+      month_key: getCurrentMonthKey(),
+      logged_at: new Date().toISOString()
+    });
+    loader(false);
+    document.getElementById('succ-ring').className = `success-ring ${state.clr}`;
+    document.getElementById('succ-title').textContent = 'Logged for ' + state.person + '!';
+    const parts = [];
+    if (state.pendingHouse > 0) parts.push('₹' + state.pendingHouse.toLocaleString('en-IN') + ' → house pool');
+    if (state.pendingPersonal > 0) parts.push('₹' + state.pendingPersonal.toLocaleString('en-IN') + ' → personal');
+    document.getElementById('succ-sub').textContent = parts.join('\n');
+    document.getElementById('succ-btn').className = `action-btn ${state.clr}`;
+    document.getElementById('description').value = '';
+    showScreen('s-success');
+  } catch(e) {
+    loader(false);
+    document.getElementById('err-banner').classList.add('show');
+  }
+  btn.disabled = false; btn.textContent = 'Log expense ✓';
+}
+
+async function loadSummary() {
+  loader(true, 'Loading summary...');
+  try {
+    const all = await supaFetch(`expenses?select=*&order=logged_at.desc`);
+    loader(false);
+    const months = [...new Set(all.map(e=>e.month_key))].sort().reverse().slice(0,6);
+    if (!months.includes(state.viewMonth)) state.viewMonth = months[0] || getCurrentMonthKey();
+    renderMonthTabs(months);
+    renderSummaryForMonth(all, state.viewMonth);
+  } catch(e) {
+    loader(false);
+  }
+}
+
+function renderMonthTabs(months) {
+  document.getElementById('month-tabs').innerHTML = months.map(m =>
+    `<button class="month-tab ${m===state.viewMonth?'active':''}" onclick="switchMonth('${m}')">${monthLabel(m)}</button>`
+  ).join('');
+}
+
+function switchMonth(m) {
+  state.viewMonth = m;
+  loadSummary();
+}
+
+function renderSummaryForMonth(all, monthKey) {
+  const rows = all.filter(e=>e.month_key===monthKey);
+  const cfgs = [
+    {name:'Navneil',clr:'nav',fill:'var(--nav)',bg:'var(--nav-bg)'},
+    {name:'Simran',clr:'sim',fill:'var(--sim)',bg:'var(--sim-bg)'},
+    {name:'Lakshay',clr:'lak',fill:'var(--lak)',bg:'var(--lak-bg)'}
+  ];
+  const peoplEl = document.getElementById('summary-people');
+  peoplEl.innerHTML = cfgs.map(c => {
+    const personal = rows.filter(r=>r.person===c.name).reduce((s,r)=>s+r.personal_amount,0);
+    const pct = Math.min(100, Math.round((personal/BUDGET)*100));
+    const left = BUDGET - personal;
+    return `<div class="summary-person">
+      <div class="sp-head">
+        <div class="sp-av" style="background:${c.bg};color:${c.fill};">${c.name[0]}</div>
+        <div><div class="sp-name">${c.name}</div><div class="sp-sub">₹${personal.toLocaleString('en-IN')} personal spent</div></div>
+        <div class="sp-left" style="color:${left<500?'#e87070':'var(--text)'}">${left.toLocaleString('en-IN')} left</div>
+      </div>
+      <div class="prog"><div class="prog-fill" style="width:${pct}%;background:${c.fill};"></div></div>
+      <div class="sp-stats"><span>Budget: ₹5,000</span><span>${pct}% used</span></div>
+    </div>`;
+  }).join('');
+
+  const houseTotal = rows.reduce((s,r)=>s+r.house_amount,0);
+  document.getElementById('house-total').textContent = '₹' + houseTotal.toLocaleString('en-IN');
+
+  const logEl = document.getElementById('log-list');
+  const recent = rows.slice(0, 12);
+  logEl.innerHTML = recent.length === 0
+    ? '<div style="font-size:13px;color:var(--muted);padding:8px;">No expenses logged yet.</div>'
+    : recent.map(e => {
+        const d = new Date(e.logged_at);
+        const clr = CLRS[e.person] || 'nav';
+        const tag = e.personal_amount > 0 && e.house_amount > 0 ? 'Mixed' : e.house_amount > 0 ? 'House' : 'Personal';
+        const amt = (e.house_amount + e.personal_amount).toLocaleString('en-IN');
+        return `<div class="log-item">
+          <div class="li-dot ${clr}"></div>
+          <div class="li-name">${e.person}</div>
+          <div class="li-tag">${tag}${e.description ? " • " + e.description : ""}</div>
+          <div class="li-date">${d.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</div>
+          <div class="li-amt">₹${amt}</div>
+          <button class="del-btn" onclick="deleteExpense('${e.id}')">🗑</button>
+        </div>`;
+      }).join('');
+}
+
+async function refreshPickSummary() {
+  try {
+    const mk = getCurrentMonthKey();
+    const rows = await supaFetch(`expenses?select=*&month_key=eq.${mk}`);
+    const cfgs = [
+      {name:'Navneil',clr:'nav',fill:'#7c6af7',bg:'#1e1b3a'},
+      {name:'Simran',clr:'sim',fill:'#2db87a',bg:'#0f2a1e'},
+      {name:'Lakshay',clr:'lak',fill:'#e8683a',bg:'#2a1710'}
+    ];
+    document.getElementById('pick-summary').innerHTML = cfgs.map(c => {
+      const personal = rows.filter(r=>r.person===c.name).reduce((s,r)=>s+r.personal_amount,0);
+      const left = BUDGET - personal;
+      return `<div style="background:${c.bg};border:1px solid ${c.fill}33;border-radius:var(--radius-sm);padding:10px 12px;">
+        <div style="font-size:11px;color:${c.fill};font-weight:500;margin-bottom:4px;">${c.name}</div>
+        <div style="font-size:17px;font-weight:500;font-family:'DM Mono',monospace;">₹${left.toLocaleString('en-IN')}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">left of ₹5k</div>
       </div>`;
-
-    // Drag
-    card.addEventListener('dragstart', onDragStart);
-    card.addEventListener('dragover',  onDragOver);
-    card.addEventListener('drop',      onDrop);
-    card.addEventListener('dragend',   onDragEnd);
-
-    list.appendChild(card);
-  });
+    }).join('');
+  } catch(e) {}
 }
 
-function setFilter(val) {
-  state.shotFilter = val;
-  renderShots();
-}
-
-function updateStats() {
-  const total     = state.shots.length;
-  const done      = state.shots.filter(s => s.completed).length;
-  const pct       = total ? Math.round(done / total * 100) : 0;
-  const high      = state.shots.filter(s => s.priority === 'High').length;
-
-  document.getElementById('proj-stats').innerHTML = `
-    <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Total Shots</div></div>
-    <div class="stat-card"><div class="stat-value">${done}</div><div class="stat-label">Completed</div></div>
-    <div class="stat-card"><div class="stat-value">${total - done}</div><div class="stat-label">Remaining</div></div>
-    <div class="stat-card"><div class="stat-value">${pct}%</div><div class="stat-label">Progress</div></div>
-    <div class="stat-card"><div class="stat-value">${high}</div><div class="stat-label">High Priority</div></div>
-  `;
-  document.getElementById('proj-progress').style.width = pct + '%';
-}
-
-async function saveShot() {
-  const pid = state.currentProject.id;
-  const body = {
-    project_id:  pid,
-    shot_type:   document.getElementById('inp-shot-type').value,
-    movement:    document.getElementById('inp-movement').value,
-    scene:       document.getElementById('inp-scene').value,
-    location:    document.getElementById('inp-location').value,
-    clothes:     document.getElementById('inp-costume').value,
-    priority:    document.getElementById('inp-priority').value,
-    description: document.getElementById('inp-description').value.trim(),
-    completed:   document.getElementById('inp-completed').checked,
-  };
-
-  try {
-    if (state.editingShot) {
-      await sb.patch('shots', state.editingShot, body);
-      toast('✓ Shot updated');
-    } else {
-      body.shot_no = state.shots.length + 1;
-      body.story_order = state.shots.length;
-      await sb.post('shots', body);
-      toast('✓ Shot added');
+async function handleImg(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  loader(true, 'Reading receipt with AI...');
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const b64 = e.target.result.split(',')[1];
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514', max_tokens: 800,
+          system: 'You are a receipt parser. Return ONLY valid JSON, no other text: {"items":[{"name":"string","amount":number,"type":"house or personal"}]}. Mark personal items like snacks, personal care, beverages as "personal". Everything else as "house". Amounts in Indian Rupees as numbers.',
+          messages: [{ role: 'user', content: [
+            { type: 'image', source: { type: 'base64', media_type: file.type || 'image/jpeg', data: b64 } },
+            { type: 'text', text: 'Parse this grocery/food delivery receipt.' }
+          ]}]
+        })
+      });
+      const data = await res.json();
+      const txt = data.content.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
+      const parsed = JSON.parse(txt);
+      state.splitItems = (parsed.items||[]).map(it => ({ label: it.name, amount: it.amount, type: it.type }));
+      const total = state.splitItems.reduce((s,x)=>s+x.amount, 0);
+      state.cat = 'mixed';
+      state.amtStr = String(total);
+      loader(false);
+      renderSplit(total);
+      updateSplitTotals();
+      document.getElementById('split-done').className = `action-btn ${state.clr}`;
+      showScreen('s-split');
+    } catch(err) {
+      loader(false);
+      alert('Could not read the screenshot. Please try again or enter manually.');
     }
-    closeModal('modal-new-shot');
-    state.editingShot = null;
-    await loadShots();
-  } catch(e) {
-    toast('Save failed', 'var(--danger)');
-    console.error(e);
-  }
-}
-
-function editShot(id) {
-  const shot = state.shots.find(s => s.id === id);
-  if (!shot) return;
-  state.editingShot = id;
-
-  document.getElementById('shot-modal-title').textContent = 'EDIT SHOT';
-  document.getElementById('inp-shot-type').value   = shot.shot_type  || '';
-  document.getElementById('inp-movement').value    = shot.movement   || '';
-  document.getElementById('inp-description').value = shot.description|| '';
-  document.getElementById('inp-priority').value    = shot.priority   || '';
-  document.getElementById('inp-completed').checked = !!shot.completed;
-
-  // populate selects first, then set values
-  populateShotSelects().then(() => {
-    document.getElementById('inp-scene').value    = shot.scene    || '';
-    document.getElementById('inp-location').value = shot.location || '';
-    document.getElementById('inp-costume').value  = shot.clothes  || '';
-    openModal('modal-new-shot');
-  });
-}
-
-async function deleteShot(id) {
-  try {
-    await sb.delete('shots', id);
-    state.shots = state.shots.filter(s => s.id !== id);
-    renderShots();
-    updateStats();
-    toast('Shot deleted');
-  } catch(e) {
-    toast('Delete failed', 'var(--danger)');
-  }
-}
-
-async function toggleComplete(id, current) {
-  try {
-    await sb.patch('shots', id, { completed: !current });
-    const shot = state.shots.find(s => s.id === id);
-    if (shot) shot.completed = !current;
-    renderShots();
-    updateStats();
-    toast(current ? '↩ Marked incomplete' : '✓ Shot completed');
-  } catch(e) {
-    toast('Error', 'var(--danger)');
-  }
-}
-
-// ════════════════════════════════════════════
-//   DRAG & DROP (story order)
-// ════════════════════════════════════════════
-let dragSrcId = null;
-
-function onDragStart(e) {
-  dragSrcId = this.dataset.id;
-  this.classList.add('dragging');
-  e.dataTransfer.effectAllowed = 'move';
-}
-function onDragOver(e) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-}
-async function onDrop(e) {
-  e.preventDefault();
-  if (dragSrcId === this.dataset.id) return;
-  const srcIdx = state.shots.findIndex(s => s.id === dragSrcId);
-  const tgtIdx = state.shots.findIndex(s => s.id === this.dataset.id);
-  const [item] = state.shots.splice(srcIdx, 1);
-  state.shots.splice(tgtIdx, 0, item);
-  renderShots();
-  // Persist story_order
-  for (let i = 0; i < state.shots.length; i++) {
-    sb.patch('shots', state.shots[i].id, { story_order: i }).catch(()=>{});
-  }
-  toast('Story order saved');
-}
-function onDragEnd() {
-  this.classList.remove('dragging');
-}
-
-// ════════════════════════════════════════════
-//   CATEGORIES
-// ════════════════════════════════════════════
-async function loadAllCategories() {
-  const pid = state.currentProject.id;
-  const all = await sb.get('categories', `?project_id=eq.${pid}`);
-  state.categories = { scenes:[], locations:[], costumes:[], characters:[] };
-  all.forEach(c => {
-    const key = c.type;
-    if (state.categories[key]) state.categories[key].push(c);
-  });
-}
-
-function renderCategory(type) {
-  const items = state.categories[type] || [];
-  const list  = document.getElementById('cat-list');
-  const empty = document.getElementById('cat-empty');
-
-  // label for input
-  document.getElementById('cat-input').placeholder = `Add ${type.slice(0,-1)}…`;
-
-  list.innerHTML = '';
-  if (!items.length) { empty.style.display = 'block'; return; }
-  empty.style.display = 'none';
-
-  items.forEach(c => {
-    const pill = document.createElement('div');
-    pill.className = 'category-pill';
-    pill.innerHTML = `${esc(c.name)} <span class="del" onclick="confirmDelete('category','${c.id}')">×</span>`;
-    list.appendChild(pill);
-  });
-}
-
-async function addCategory() {
-  const type = state.activeTab;
-  const name = document.getElementById('cat-input').value.trim();
-  if (!name) return;
-  try {
-    const [cat] = await sb.post('categories', {
-      project_id: state.currentProject.id,
-      type, name
-    });
-    if (!state.categories[type]) state.categories[type] = [];
-    state.categories[type].push(cat);
-    document.getElementById('cat-input').value = '';
-    renderCategory(type);
-    toast(`✓ Added to ${type}`);
-  } catch(e) {
-    toast('Error', 'var(--danger)');
-  }
-}
-
-async function deleteCat(id) {
-  try {
-    await sb.delete('categories', id);
-    for (const key of Object.keys(state.categories)) {
-      state.categories[key] = state.categories[key].filter(c => c.id !== id);
-    }
-    renderCategory(state.activeTab);
-    toast('Removed');
-  } catch(e) {
-    toast('Error', 'var(--danger)');
-  }
-}
-
-// ════════════════════════════════════════════
-//   POPULATE SHOT SELECTS FROM CATEGORIES
-// ════════════════════════════════════════════
-function openNewShotModal() {
-  state.editingShot = null;
-  document.getElementById('shot-modal-title').textContent = 'NEW SHOT';
-  document.getElementById('inp-shot-type').value   = '';
-  document.getElementById('inp-movement').value    = '';
-  document.getElementById('inp-description').value = '';
-  document.getElementById('inp-priority').value    = '';
-  document.getElementById('inp-completed').checked = false;
-  populateShotSelects().then(() => openModal('modal-new-shot'));
-}
-
-async function populateShotSelects() {
-  const fill = (id, items) => {
-    const sel = document.getElementById(id);
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">— select —</option>';
-    items.forEach(n => {
-      const o = document.createElement('option');
-      o.value = o.textContent = n;
-      sel.appendChild(o);
-    });
-    sel.value = cur;
   };
-  fill('inp-scene',    (state.categories.scenes    || []).map(c => c.name));
-  fill('inp-location', (state.categories.locations || []).map(c => c.name));
-  fill('inp-costume',  (state.categories.costumes  || []).map(c => c.name));
+  reader.readAsDataURL(file);
+  event.target.value = '';
 }
 
-// Override the + SHOT button click
-document.addEventListener('DOMContentLoaded', () => {
-  // Re-wire the + SHOT button
-  const addShotBtn = document.querySelector('[onclick="openModal(\'modal-new-shot\')"]');
-  if (addShotBtn) {
-    addShotBtn.removeAttribute('onclick');
-    addShotBtn.addEventListener('click', openNewShotModal);
+async function deleteExpense(id) {
+  if (!confirm('Are you sure you want to delete this expense?')) return;
+  loader(true, 'Deleting...');
+  try {
+    await supaFetch(`expenses?id=eq.${id}`, 'DELETE');
+    loader(false);
+    await loadSummary();
+    await refreshPickSummary();
+  } catch(e) {
+    loader(false);
+    alert('Could not delete expense.');
   }
-});
-
-// ════════════════════════════════════════════
-//   UTILS
-// ════════════════════════════════════════════
-function esc(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// Enter key support
-document.getElementById('inp-project-name').addEventListener('keydown', e => {
-  if (e.key === 'Enter') createProject();
-});
 
-// ════════════════════════════════════════════
-//   BOOT
-// ════════════════════════════════════════════
-loadProjects();
+refreshPickSummary();
 </script>
 </body>
 </html>

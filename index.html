@@ -292,6 +292,7 @@
     .month-tab { padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 500; border: 1px solid var(--border); background: none; color: var(--muted); cursor: pointer; white-space: nowrap; font-family: inherit; transition: all 0.15s; }
     .month-tab.active { background: var(--surface2); color: var(--text); border-color: var(--text); }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -363,8 +364,8 @@
   </div>
   <label class="upload-zone">
     <div class="upload-icon">📷</div>
-    Upload Blinkit / Swiggy screenshot<br>
-    <span style="font-size:11px;">AI will read and split the items</span>
+    Upload Blinkit / Swiggy / Zepto screenshot<br>
+    <span style="font-size:11px;">Reads and pre-splits the items — review before confirming</span>
     <input type="file" accept="image/*" style="display:none" onchange="handleImg(event)"/>
   </label>
 </div>
@@ -974,69 +975,81 @@ async function refreshPickSummary() {
   } catch(e) {}
 }
 
-const GEMINI_API_KEY = 'AQ.Ab8RN6Ikmz-juK_IyNGT3SCTYKzTtdQqTqU7rpFXIOddEK4FCg';
+// Keywords that lean "personal" when found in an OCR'd item name — everything else defaults to "house".
+// Add more anytime; matching is case-insensitive substring matching.
+const PERSONAL_KEYWORDS = [
+  'chocolate','choco','biscuit','wafer','cookie','coffee','tea ','cold drink','soda',
+  'soft drink','juice','ice cream','icecream','snack','candy','chewing gum',
+  'mouth freshener','perfume','deodorant','deo ','cologne','shampoo','soap','toothpaste',
+  'toothbrush','sanitary','diaper','cosmetic','makeup','lipstick','razor','shaving',
+  'cigarette','tobacco','paan','gutkha','magazine','novel','frooti','maaza','pepsi',
+  'coke','sprite','fanta','lays','kurkure','oreo','kitkat','dairy milk','perk','munch',
+  '5star','bournvita','energy drink','red bull','monster'
+];
+
+// Lines matching these are receipt chrome (fees, totals, headers) — never treated as items.
+const SKIP_LINE_RE = /bill summary|item total|delivery fee|handling fee|total bill|grand total|order\s*#|order id|order details|receiver details|rate order|order again|get help|delivered|items? in order|download invoice|small cart|surge fee|convenience fee|packaging fee|platform fee|^\d{1,2}:\d{2}$/i;
+
+function classifyItem(name, amount) {
+  const lower = name.toLowerCase();
+  const isPersonal = PERSONAL_KEYWORDS.some(k => lower.includes(k));
+  return { label: name, amount, type: isPersonal ? 'personal' : 'house' };
+}
+
+function parseReceiptText(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const priceRe = /(?:₹|Rs\.?|INR)\s?(\d+(?:\.\d{1,2})?)/i;
+  const bareNumRe = /^\d{1,5}(?:\.\d{1,2})?$/;
+  const looksLikeQty = /^\d+\s*(unit|pack|ml|g|kg|x)\b/i;
+  const items = [];
+  let pendingName = '';
+  for (const line of lines) {
+    if (SKIP_LINE_RE.test(line)) { pendingName = ''; continue; }
+    const m = line.match(priceRe);
+    if (m) {
+      const withoutPrice = line.replace(priceRe, '').trim();
+      const name = (pendingName && pendingName.length > 2) ? pendingName
+                 : (withoutPrice.length > 2 ? withoutPrice : 'Item');
+      const amt = Math.round(parseFloat(m[1]));
+      if (amt > 0) items.push(classifyItem(name, amt));
+      pendingName = '';
+    } else if (bareNumRe.test(line)) {
+      const amt = Math.round(parseFloat(line));
+      if (amt > 0 && pendingName) { items.push(classifyItem(pendingName, amt)); pendingName = ''; }
+    } else if (line.length > 2 && line.length < 60 && !looksLikeQty.test(line)) {
+      pendingName = line;
+    }
+  }
+  return items;
+}
 
 async function handleImg(event) {
   const file = event.target.files[0];
   if (!file) return;
-  loader(true, 'Reading receipt with AI...');
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const b64 = e.target.result.split(',')[1];
-    try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: 'Parse this grocery/food delivery order screenshot (Blinkit, Swiggy, Instamart, etc). List every item with its name and price in Indian Rupees. Mark personal items like snacks, personal care, beverages, or individual treats as "personal". Mark shared household items like groceries, staples, and cleaning supplies as "house".' },
-              { inline_data: { mime_type: file.type || 'image/jpeg', data: b64 } }
-            ]
-          }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: 'OBJECT',
-              properties: {
-                items: {
-                  type: 'ARRAY',
-                  items: {
-                    type: 'OBJECT',
-                    properties: {
-                      name: { type: 'STRING' },
-                      amount: { type: 'NUMBER' },
-                      type: { type: 'STRING', enum: ['house', 'personal'] }
-                    },
-                    required: ['name', 'amount', 'type']
-                  }
-                }
-              },
-              required: ['items']
-            }
-          }
-        })
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message || 'Gemini API error');
-      const txt = data.candidates[0].content.parts[0].text;
-      const parsed = JSON.parse(txt);
-      state.splitItems = (parsed.items || []).map(it => ({ label: it.name, amount: it.amount, type: it.type }));
-      const total = state.splitItems.reduce((s,x)=>s+x.amount, 0);
-      state.cat = 'mixed';
-      state.amtStr = String(total);
+  loader(true, 'Reading screenshot (OCR)...');
+  try {
+    const { data: { text } } = await Tesseract.recognize(file, 'eng');
+    const items = parseReceiptText(text);
+    if (items.length === 0) {
       loader(false);
-      renderSplit(total);
-      updateSplitTotals();
-      document.getElementById('split-done').className = `action-btn ${state.clr}`;
-      showScreen('s-split');
-    } catch(err) {
-      loader(false);
-      console.error('Receipt scan failed:', err);
-      alert('Could not read the screenshot. Please try again or enter manually.');
+      alert('Could not find any items in that screenshot. Try a clearer image, or enter the expense manually.');
+      event.target.value = '';
+      return;
     }
-  };
-  reader.readAsDataURL(file);
+    state.splitItems = items;
+    const total = items.reduce((s,x) => s + x.amount, 0);
+    state.cat = 'mixed';
+    state.amtStr = String(total);
+    loader(false);
+    renderSplit(total);
+    updateSplitTotals();
+    document.getElementById('split-done').className = `action-btn ${state.clr}`;
+    showScreen('s-split');
+  } catch (err) {
+    loader(false);
+    console.error('Receipt scan failed:', err);
+    alert('Could not read the screenshot. Please try again or enter manually.');
+  }
   event.target.value = '';
 }
 

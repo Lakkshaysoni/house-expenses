@@ -974,6 +974,8 @@ async function refreshPickSummary() {
   } catch(e) {}
 }
 
+const GEMINI_API_KEY = 'AQ.Ab8RN6Ikmz-juK_IyNGT3SCTYKzTtdQqTqU7rpFXIOddEK4FCg';
+
 async function handleImg(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -982,22 +984,44 @@ async function handleImg(event) {
   reader.onload = async (e) => {
     const b64 = e.target.result.split(',')[1];
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514', max_tokens: 800,
-          system: 'You are a receipt parser. Return ONLY valid JSON, no other text: {"items":[{"name":"string","amount":number,"type":"house or personal"}]}. Mark personal items like snacks, personal care, beverages as "personal". Everything else as "house". Amounts in Indian Rupees as numbers.',
-          messages: [{ role: 'user', content: [
-            { type: 'image', source: { type: 'base64', media_type: file.type || 'image/jpeg', data: b64 } },
-            { type: 'text', text: 'Parse this grocery/food delivery receipt.' }
-          ]}]
+          contents: [{
+            parts: [
+              { text: 'Parse this grocery/food delivery order screenshot (Blinkit, Swiggy, Instamart, etc). List every item with its name and price in Indian Rupees. Mark personal items like snacks, personal care, beverages, or individual treats as "personal". Mark shared household items like groceries, staples, and cleaning supplies as "house".' },
+              { inline_data: { mime_type: file.type || 'image/jpeg', data: b64 } }
+            ]
+          }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'OBJECT',
+              properties: {
+                items: {
+                  type: 'ARRAY',
+                  items: {
+                    type: 'OBJECT',
+                    properties: {
+                      name: { type: 'STRING' },
+                      amount: { type: 'NUMBER' },
+                      type: { type: 'STRING', enum: ['house', 'personal'] }
+                    },
+                    required: ['name', 'amount', 'type']
+                  }
+                }
+              },
+              required: ['items']
+            }
+          }
         })
       });
       const data = await res.json();
-      const txt = data.content.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
+      if (data.error) throw new Error(data.error.message || 'Gemini API error');
+      const txt = data.candidates[0].content.parts[0].text;
       const parsed = JSON.parse(txt);
-      state.splitItems = (parsed.items||[]).map(it => ({ label: it.name, amount: it.amount, type: it.type }));
+      state.splitItems = (parsed.items || []).map(it => ({ label: it.name, amount: it.amount, type: it.type }));
       const total = state.splitItems.reduce((s,x)=>s+x.amount, 0);
       state.cat = 'mixed';
       state.amtStr = String(total);
@@ -1008,6 +1032,7 @@ async function handleImg(event) {
       showScreen('s-split');
     } catch(err) {
       loader(false);
+      console.error('Receipt scan failed:', err);
       alert('Could not read the screenshot. Please try again or enter manually.');
     }
   };

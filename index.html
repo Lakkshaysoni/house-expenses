@@ -28,6 +28,8 @@
       --house-bg: #0d1f35;
       --personal: #f7c948;
       --personal-bg: #2a2210;
+      --office: #2dd4bf;
+      --office-bg: #0d2a27;
       --radius: 16px;
       --radius-sm: 10px;
     }
@@ -79,7 +81,7 @@
     .lak .avatar { background: var(--lak-bg); color: var(--lak); }
     .person-name { font-size: 14px; font-weight: 500; }
 
-    .cat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .cat-btn {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -98,6 +100,7 @@
     .cat-btn.house.sel { border-color: var(--house); background: var(--house-bg); }
     .cat-btn.personal.sel { border-color: var(--personal); background: var(--personal-bg); }
     .cat-btn.mixed.sel { border-color: var(--sim); background: var(--sim-bg); }
+    .cat-btn.office.sel { border-color: var(--office); background: var(--office-bg); }
 
     .amount-box {
       background: var(--surface);
@@ -136,22 +139,44 @@
     .nkey.go.sim { background: var(--sim-bg); color: var(--sim); border-color: var(--sim); }
     .nkey.go.lak { background: var(--lak-bg); color: var(--lak); border-color: var(--lak); }
 
+    .split-total { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 14px; text-align: center; font-size: 13px; color: var(--muted); }
+    .split-total .stv { font-family: 'DM Mono', monospace; font-weight: 500; color: var(--text); }
     .split-container { display: flex; flex-direction: column; gap: 1px; background: var(--border); border-radius: var(--radius); overflow: hidden; }
-    .split-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface); }
-    .split-label { flex: 1; font-size: 13px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .split-toggle { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); flex-shrink: 0; }
-    .split-toggle button {
-      padding: 5px 10px; font-size: 11px; font-weight: 500;
-      border: none; cursor: pointer; background: none;
-      color: var(--muted); font-family: inherit; transition: all 0.15s;
+    .split-row { display: flex; align-items: center; gap: 8px; padding: 12px 14px; background: var(--surface); }
+    .split-label-input {
+      flex: 1; min-width: 0; font-size: 13px; background: none; border: none; color: var(--text);
+      font-family: inherit; padding: 4px 0; border-bottom: 1px dashed transparent;
     }
-    .split-toggle button.ah { background: var(--house-bg); color: var(--house); }
-    .split-toggle button.ap { background: var(--personal-bg); color: var(--personal); }
-    .split-amt { width: 68px; font-family: 'DM Mono', monospace; font-size: 13px; text-align: right; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); flex-shrink: 0; }
-    .split-totals { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 14px; display: flex; gap: 16px; }
+    .split-label-input:focus { outline: none; border-bottom-color: var(--muted); }
+    .split-type {
+      flex-shrink: 0; font-size: 12px; font-weight: 500; font-family: inherit;
+      border-radius: 8px; border: 1px solid var(--border); padding: 6px 6px; cursor: pointer;
+    }
+    .split-type.house { background: var(--house-bg); color: var(--house); }
+    .split-type.personal { background: var(--personal-bg); color: var(--personal); }
+    .split-type.office { background: var(--office-bg); color: var(--office); }
+    .split-amt { width: 64px; font-family: 'DM Mono', monospace; font-size: 13px; text-align: right; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); flex-shrink: 0; }
+    .split-remove { flex-shrink: 0; background: none; border: none; color: var(--muted); font-size: 15px; cursor: pointer; padding: 2px 4px; }
+    .add-split-btn {
+      width: 100%; padding: 12px; border-radius: var(--radius-sm); border: 1px dashed var(--border);
+      background: none; color: var(--muted); font-size: 13px; font-family: inherit; cursor: pointer;
+    }
+    .add-split-btn:active { border-color: var(--sim); color: var(--sim); }
+    .split-remaining { border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13px; text-align: center; font-family: 'DM Mono', monospace; font-weight: 500; transition: all 0.15s; }
+    .split-remaining.ok { background: var(--sim-bg); color: var(--sim); }
+    .split-remaining.bad { background: #2a1010; color: #f08080; }
+    .split-totals { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 14px; display: flex; gap: 12px; }
     .split-total-item { flex: 1; }
     .split-total-item .stl { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
-    .split-total-item .stv { font-size: 15px; font-weight: 500; font-family: 'DM Mono', monospace; }
+    .split-total-item .stv { font-size: 14px; font-weight: 500; font-family: 'DM Mono', monospace; }
+
+    .source-select {
+      width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text); font-family: inherit; font-size: 14px;
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center; background-size: 16px;
+    }
 
     .confirm-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
     .confirm-row { display: flex; justify-content: space-between; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
@@ -282,6 +307,11 @@
       <div class="cat-name">Mixed</div>
       <div class="cat-desc">Some of both</div>
     </button>
+    <button class="cat-btn office" id="cb-office" onclick="pickCat('office')">
+      <div class="cat-icon">💼</div>
+      <div class="cat-name">Office</div>
+      <div class="cat-desc">Office pool</div>
+    </button>
   </div>
   <label class="upload-zone">
     <div class="upload-icon">📷</div>
@@ -310,16 +340,23 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
     Back
   </button>
-  <div class="label">Mark each item — house or personal?</div>
+  <div class="label">Split the total</div>
+  <div class="split-total">Total: <span class="stv" id="split-total-disp">₹0</span></div>
   <div class="split-container" id="split-items"></div>
+  <button class="add-split-btn" onclick="addSplit()">+ Add split</button>
+  <div class="split-remaining" id="split-remaining">Remaining: ₹0</div>
   <div class="split-totals">
     <div class="split-total-item">
       <div class="stl">🏠 House</div>
       <div class="stv" id="st-house" style="color:var(--house)">₹0</div>
     </div>
     <div class="split-total-item">
-      <div class="stl">👤 Personal</div>
+      <div class="stl">👤 Mine</div>
       <div class="stv" id="st-personal" style="color:var(--personal)">₹0</div>
+    </div>
+    <div class="split-total-item">
+      <div class="stl">💼 Office</div>
+      <div class="stv" id="st-office" style="color:var(--office)">₹0</div>
     </div>
   </div>
   <button class="action-btn" id="split-done" onclick="goConfirmFromSplit()">Confirm split →</button>
@@ -337,6 +374,16 @@
   <textarea id="description"
     placeholder="Optional description (Diet Coke, Blinkit groceries, Electricity bill...)"
     style="width:100%;min-height:80px;background:#1a1a1a;border:1px solid #2e2e2e;border-radius:12px;color:white;padding:12px;font-family:inherit;resize:none;"></textarea>
+
+  <select id="source" class="source-select">
+    <option value="">Ordered from (optional)</option>
+    <option value="Zomato">Zomato</option>
+    <option value="Blinkit">Blinkit</option>
+    <option value="Swiggy">Swiggy</option>
+    <option value="Instamart">Instamart</option>
+    <option value="Flipkart Minutes">Flipkart Minutes</option>
+    <option value="BigBasket">BigBasket</option>
+  </select>
 
   <div class="error-banner" id="err-banner">Could not save. Check your connection and try again.</div>
   <button class="action-btn" id="confirm-btn" onclick="logExpense()">Log expense ✓</button>
@@ -362,9 +409,15 @@
   </div>
   <div class="month-tabs" id="month-tabs"></div>
   <div id="summary-people"></div>
-  <div class="house-card">
-    <div class="hc-label">TOTAL HOUSE EXPENSES</div>
-    <div class="hc-amt" id="house-total">₹0</div>
+  <div style="display:flex;gap:10px;">
+    <div class="house-card" style="flex:1;">
+      <div class="hc-label">TOTAL HOUSE</div>
+      <div class="hc-amt" id="house-total">₹0</div>
+    </div>
+    <div class="house-card" style="flex:1;border-color:var(--office);background:var(--office-bg);">
+      <div class="hc-label" style="color:var(--office);">TOTAL OFFICE</div>
+      <div class="hc-amt" id="office-total">₹0</div>
+    </div>
   </div>
   <div class="label">Recent entries</div>
   <div class="log-list" id="log-list"></div>
@@ -384,6 +437,8 @@ let state = {
   splitItems: [],
   pendingHouse: 0,
   pendingPersonal: 0,
+  pendingOffice: 0,
+  splitTotal: 0,
   viewMonth: getCurrentMonthKey()
 };
 
@@ -421,13 +476,13 @@ function showScreen(id) {
 function pick(name, clr) {
   state.person = name; state.clr = clr; state.amtStr = '0'; state.cat = '';
   document.getElementById('cat-label').textContent = name + ' — what kind of expense?';
-  ['house','personal','mixed'].forEach(c => document.getElementById('cb-'+c).classList.remove('sel'));
+  ['house','personal','mixed','office'].forEach(c => document.getElementById('cb-'+c).classList.remove('sel'));
   showScreen('s-cat');
 }
 
 function pickCat(cat) {
   state.cat = cat; state.amtStr = '0';
-  ['house','personal','mixed'].forEach(c => document.getElementById('cb-'+c).classList.remove('sel'));
+  ['house','personal','mixed','office'].forEach(c => document.getElementById('cb-'+c).classList.remove('sel'));
   document.getElementById('cb-'+cat).classList.add('sel');
   buildNumpad();
   updateAmt();
@@ -453,7 +508,7 @@ function nk(k) {
 function updateAmt() {
   const amt = parseInt(state.amtStr)||0;
   document.getElementById('amt-disp').textContent = '₹' + amt.toLocaleString('en-IN');
-  const hints = { house: 'goes to house pool — your ₹5k untouched', personal: 'deducted from your ₹5,000 budget', mixed: "you'll split items next" };
+  const hints = { house: 'goes to house pool — your ₹5k untouched', personal: 'deducted from your ₹5,000 budget', mixed: "you'll split items next", office: 'goes to office pool — separate from house & personal' };
   document.getElementById('amt-hint').textContent = hints[state.cat];
 }
 
@@ -464,45 +519,88 @@ function proceedAmt() {
   else {
     state.pendingHouse = state.cat === 'house' ? amt : 0;
     state.pendingPersonal = state.cat === 'personal' ? amt : 0;
+    state.pendingOffice = state.cat === 'office' ? amt : 0;
     buildConfirmUI(); showScreen('s-confirm');
   }
 }
 
 function buildSplitUI(total) {
-  const n = Math.max(2, Math.min(total > 500 ? 4 : 2, 5));
-  const share = Math.floor(total / n);
-  state.splitItems = Array.from({length:n}, (_,i) => ({
-    label: 'Item ' + (i+1),
-    amount: i < n-1 ? share : total - share*(n-1),
-    type: 'house'
-  }));
+  state.splitItems = [
+    { label: 'Mine', amount: 0, type: 'personal' },
+    { label: 'House', amount: total, type: 'house' }
+  ];
   renderSplit(total);
   document.getElementById('split-done').className = `action-btn ${state.clr}`;
 }
 
 function renderSplit(total) {
+  state.splitTotal = total;
+  document.getElementById('split-total-disp').textContent = '₹' + total.toLocaleString('en-IN');
   document.getElementById('split-items').innerHTML = state.splitItems.map((it,i) => `
     <div class="split-row">
-      <div class="split-label">${it.label}</div>
-      <div class="split-toggle">
-        <button class="${it.type==='house'?'ah':''}" onclick="stType(${i},'house')">House</button>
-        <button class="${it.type==='personal'?'ap':''}" onclick="stType(${i},'personal')">Mine</button>
-      </div>
-      <input class="split-amt" type="number" value="${it.amount}" min="0" onchange="stAmt(${i},this.value)"/>
+      <input class="split-label-input" value="${it.label}" onchange="stLabel(${i},this.value)" placeholder="Item"/>
+      <select class="split-type ${it.type}" onchange="stType(${i},this.value)">
+        <option value="house" ${it.type==='house'?'selected':''}>House</option>
+        <option value="personal" ${it.type==='personal'?'selected':''}>Mine</option>
+        <option value="office" ${it.type==='office'?'selected':''}>Office</option>
+      </select>
+      <input class="split-amt" id="split-amt-${i}" type="number" value="${it.amount}" min="0" oninput="stAmt(${i},this.value)"/>
+      ${state.splitItems.length > 1 ? `<button class="split-remove" onclick="removeSplit(${i})">✕</button>` : ''}
     </div>
   `).join('');
   updateSplitTotals();
 }
 
-function stType(i, type) { state.splitItems[i].type = type; renderSplit(parseInt(state.amtStr)||0); }
-function stAmt(i, v) { state.splitItems[i].amount = parseInt(v)||0; updateSplitTotals(); }
+function stLabel(i, v) { state.splitItems[i].label = v; }
+
+function stType(i, v) { state.splitItems[i].type = v; renderSplit(state.splitTotal); }
+
+function stAmt(i, v) {
+  const val = parseInt(v) || 0;
+  state.splitItems[i].amount = val;
+  // With exactly 2 splits, auto-fill the other one with the remainder
+  if (state.splitItems.length === 2) {
+    const otherIdx = i === 0 ? 1 : 0;
+    const rem = Math.max(0, state.splitTotal - val);
+    state.splitItems[otherIdx].amount = rem;
+    const otherInput = document.getElementById('split-amt-' + otherIdx);
+    if (otherInput) otherInput.value = rem;
+  }
+  updateSplitTotals();
+}
+
+function addSplit() {
+  state.splitItems.push({ label: 'Split ' + (state.splitItems.length+1), amount: 0, type: 'house' });
+  renderSplit(state.splitTotal);
+}
+
+function removeSplit(i) {
+  if (state.splitItems.length <= 1) return;
+  state.splitItems.splice(i, 1);
+  renderSplit(state.splitTotal);
+}
 
 function updateSplitTotals() {
   const h = state.splitItems.filter(x=>x.type==='house').reduce((s,x)=>s+x.amount,0);
   const p = state.splitItems.filter(x=>x.type==='personal').reduce((s,x)=>s+x.amount,0);
+  const o = state.splitItems.filter(x=>x.type==='office').reduce((s,x)=>s+x.amount,0);
   document.getElementById('st-house').textContent = '₹'+h.toLocaleString('en-IN');
   document.getElementById('st-personal').textContent = '₹'+p.toLocaleString('en-IN');
-  state.pendingHouse = h; state.pendingPersonal = p;
+  document.getElementById('st-office').textContent = '₹'+o.toLocaleString('en-IN');
+  state.pendingHouse = h; state.pendingPersonal = p; state.pendingOffice = o;
+
+  const remaining = state.splitTotal - (h + p + o);
+  const remEl = document.getElementById('split-remaining');
+  const doneBtn = document.getElementById('split-done');
+  if (remaining === 0) {
+    remEl.textContent = 'Fully allocated ✓';
+    remEl.className = 'split-remaining ok';
+    if (doneBtn) { doneBtn.disabled = false; doneBtn.style.opacity = '1'; }
+  } else {
+    remEl.textContent = 'Remaining: ₹' + remaining.toLocaleString('en-IN');
+    remEl.className = 'split-remaining bad';
+    if (doneBtn) { doneBtn.disabled = true; doneBtn.style.opacity = '0.5'; }
+  }
 }
 
 function goConfirmFromSplit() { buildConfirmUI(); showScreen('s-confirm'); }
@@ -511,11 +609,13 @@ function goBackFromConfirm() { showScreen(state.cat === 'mixed' ? 's-split' : 's
 function buildConfirmUI() {
   document.getElementById('confirm-btn').className = `action-btn ${state.clr}`;
   document.getElementById('err-banner').classList.remove('show');
+  const total = state.pendingHouse + state.pendingPersonal + state.pendingOffice;
   let html = `
     <div class="confirm-row"><span class="cl">Person</span><span class="cv">${state.person}</span></div>
-    <div class="confirm-row"><span class="cl">Total</span><span class="cv" style="font-family:'DM Mono',monospace;">₹${(state.pendingHouse+state.pendingPersonal).toLocaleString('en-IN')}</span></div>`;
+    <div class="confirm-row"><span class="cl">Total</span><span class="cv" style="font-family:'DM Mono',monospace;">₹${total.toLocaleString('en-IN')}</span></div>`;
   if (state.pendingHouse > 0) html += `<div class="confirm-row"><span class="cl">House expense</span><span class="cv"><span class="badge h">₹${state.pendingHouse.toLocaleString('en-IN')}</span></span></div>`;
   if (state.pendingPersonal > 0) html += `<div class="confirm-row"><span class="cl">Personal (from ₹5k)</span><span class="cv"><span class="badge p">₹${state.pendingPersonal.toLocaleString('en-IN')}</span></span></div>`;
+  if (state.pendingOffice > 0) html += `<div class="confirm-row"><span class="cl">Office expense</span><span class="cv"><span class="badge" style="background:var(--office-bg);color:var(--office);">₹${state.pendingOffice.toLocaleString('en-IN')}</span></span></div>`;
   document.getElementById('confirm-details').innerHTML = html;
 }
 
@@ -529,7 +629,9 @@ async function logExpense() {
       person: state.person,
       house_amount: state.pendingHouse,
       personal_amount: state.pendingPersonal,
+      office_amount: state.pendingOffice,
       description: document.getElementById('description').value.trim(),
+      source: document.getElementById('source').value || null,
       month_key: getCurrentMonthKey(),
       logged_at: new Date().toISOString()
     });
@@ -539,9 +641,11 @@ async function logExpense() {
     const parts = [];
     if (state.pendingHouse > 0) parts.push('₹' + state.pendingHouse.toLocaleString('en-IN') + ' → house pool');
     if (state.pendingPersonal > 0) parts.push('₹' + state.pendingPersonal.toLocaleString('en-IN') + ' → personal');
+    if (state.pendingOffice > 0) parts.push('₹' + state.pendingOffice.toLocaleString('en-IN') + ' → office pool');
     document.getElementById('succ-sub').textContent = parts.join('\n');
     document.getElementById('succ-btn').className = `action-btn ${state.clr}`;
     document.getElementById('description').value = '';
+    document.getElementById('source').value = '';
     showScreen('s-success');
   } catch(e) {
     loader(false);
@@ -600,6 +704,8 @@ function renderSummaryForMonth(all, monthKey) {
 
   const houseTotal = rows.reduce((s,r)=>s+r.house_amount,0);
   document.getElementById('house-total').textContent = '₹' + houseTotal.toLocaleString('en-IN');
+  const officeTotal = rows.reduce((s,r)=>s+(r.office_amount||0),0);
+  document.getElementById('office-total').textContent = '₹' + officeTotal.toLocaleString('en-IN');
 
   const logEl = document.getElementById('log-list');
   const recent = rows.slice(0, 12);
@@ -608,12 +714,15 @@ function renderSummaryForMonth(all, monthKey) {
     : recent.map(e => {
         const d = new Date(e.logged_at);
         const clr = CLRS[e.person] || 'nav';
-        const tag = e.personal_amount > 0 && e.house_amount > 0 ? 'Mixed' : e.house_amount > 0 ? 'House' : 'Personal';
-        const amt = (e.house_amount + e.personal_amount).toLocaleString('en-IN');
+        const office = e.office_amount || 0;
+        const activeParts = [e.house_amount>0&&'House', e.personal_amount>0&&'Personal', office>0&&'Office'].filter(Boolean);
+        const tag = activeParts.length > 1 ? 'Mixed' : (activeParts[0] || '—');
+        const amt = (e.house_amount + e.personal_amount + office).toLocaleString('en-IN');
+        const meta = [e.source, e.description].filter(Boolean).join(' • ');
         return `<div class="log-item">
           <div class="li-dot ${clr}"></div>
           <div class="li-name">${e.person}</div>
-          <div class="li-tag">${tag}${e.description ? " • " + e.description : ""}</div>
+          <div class="li-tag">${tag}${meta ? " • " + meta : ""}</div>
           <div class="li-date">${d.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</div>
           <div class="li-amt">₹${amt}</div>
           <button class="del-btn" onclick="deleteExpense('${e.id}')">🗑</button>

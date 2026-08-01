@@ -1000,11 +1000,16 @@ const PERSONAL_KEYWORDS = [
   '5star','bournvita','energy drink','red bull','monster'
 ];
 
-// Lines matching these are receipt chrome (fees, totals, headers) — never treated as items.
-const SKIP_LINE_RE = /bill summary|item total|delivery fee|handling fee|total bill|grand total|order\s*#|order id|order details|receiver details|rate order|order again|get help|delivered|items? in order|download invoice|small cart|surge fee|convenience fee|packaging fee|platform fee|free|^\d{1,2}:\d{2}|^\d+\s*items?\b/i;
+// Lines matching these are receipt chrome (fees, header noise) within the item list — skip just this line.
+const SKIP_LINE_RE = /order\s*#|order id|delivered|items? in order|small cart|surge fee|convenience fee|packaging fee|platform fee|free|^\d{1,2}:\d{2}|^\d+\s*items?\b/i;
 
-// Quantity/descriptor lines like "1 pack (500 ml) - 1 unit" — not product names.
-const QTY_LINE_RE = /\b(unit|units|pack|packs)\b/i;
+// Once we hit any of these, everything below is footer/metadata (fees, totals, order ID,
+// receiver name+phone) — never another item. Stop reading entirely rather than filter line-by-line.
+const STOP_SECTION_RE = /bill summary|order details|download invoice|rate order|order again|get help/i;
+
+// Quantity/descriptor lines like "1 pack (500 ml) - 1 unit" — not product names, and they
+// mark the end of the (possibly multi-line) item name above them.
+const QTY_LINE_RE = /pack|unit/i;
 
 function guessType(name) {
   const lower = name.toLowerCase();
@@ -1012,28 +1017,45 @@ function guessType(name) {
 }
 
 function looksLikeRealName(s) {
-  if (s.length < 4 || s.length > 70) return false;
+  if (s.length < 4 || s.length > 90) return false;
   const letters = (s.match(/[A-Za-z]/g) || []).length;
   return letters / s.length > 0.5; // majority letters, not mostly digits/symbols/noise
+}
+
+function cleanNameLine(line) {
+  // Strip a short leading garbage token some OCR runs glue on (e.g. "Ny Amul..." -> "Amul...")
+  const leadStrip = line.match(/^[^\w]{0,2}[A-Za-z]{1,3}\s+([A-Z][A-Za-z].{4,})$/);
+  if (leadStrip) line = leadStrip[1];
+  // Strip trailing digits merged onto the name (often a corrupted price fragment)
+  line = line.replace(/\s*[\d.:]{1,8}\s*$/, '').trim();
+  line = line.replace(/^[^\w]+|[^\w]+$/g, '').trim();
+  return line;
 }
 
 // OCR reliably reads letters far better than the ₹ symbol (which gets misread as stray
 // digits/letters and corrupts any nearby number). So we ONLY trust OCR for item names —
 // every price must be typed in by the person reviewing the draft, never auto-filled.
+// Product names that wrap across two lines in the app UI get merged back into one item.
 function parseReceiptItemNames(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const names = [];
-  for (let line of lines) {
-    if (SKIP_LINE_RE.test(line)) continue;
-    if (QTY_LINE_RE.test(line)) continue;
-    // Strip a short leading garbage token some OCR runs glue on (e.g. "Ny Amul..." -> "Amul...")
-    const leadStrip = line.match(/^[^\w]{0,2}[A-Za-z]{1,3}\s+([A-Z][A-Za-z].{4,})$/);
-    if (leadStrip) line = leadStrip[1];
-    // Strip trailing digits merged onto the name (often a corrupted price fragment)
-    line = line.replace(/\s*[\d.:]{1,8}\s*$/, '').trim();
-    line = line.replace(/^[^\w]+|[^\w]+$/g, '').trim();
-    if (looksLikeRealName(line)) names.push(line);
+  let buffer = [];
+  const flush = () => {
+    if (buffer.length) {
+      const combined = buffer.join(' ').replace(/\s+/g, ' ').trim();
+      if (looksLikeRealName(combined)) names.push(combined);
+      buffer = [];
+    }
+  };
+  for (const rawLine of lines) {
+    if (STOP_SECTION_RE.test(rawLine)) { flush(); break; }
+    if (SKIP_LINE_RE.test(rawLine)) { flush(); continue; }
+    if (QTY_LINE_RE.test(rawLine)) { flush(); continue; }
+    const cleaned = cleanNameLine(rawLine);
+    if (cleaned.length >= 3) buffer.push(cleaned);
+    else flush();
   }
+  flush();
   // de-duplicate while preserving order
   return [...new Set(names)];
 }

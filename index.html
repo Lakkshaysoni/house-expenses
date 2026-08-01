@@ -1001,15 +1001,15 @@ const PERSONAL_KEYWORDS = [
 ];
 
 // Lines matching these are receipt chrome (fees, header noise) within the item list — skip just this line.
-const SKIP_LINE_RE = /order\s*#|order id|delivered|items? in order|small cart|surge fee|convenience fee|packaging fee|platform fee|free|^[^\w]{0,3}\d{1,2}:\d{2}|^[^\w]{0,3}\d+\s*items?\b/i;
+const SKIP_LINE_RE = /order\s*#|order id|order summary|arrived at|delivered|items?\s+in\s+(this\s+)?order|small cart|surge fee|convenience fee|packaging fee|platform fee|free|download invoice|get help|rate (order|now)|order again|repeat order|view cart|how were your|^[^\w]{0,3}\d{1,2}:\d{2}|^[^\w]{0,3}\d+\s*items?\b/i;
 
 // Once we hit any of these, everything below is footer/metadata (fees, totals, order ID,
 // receiver name+phone) — never another item. Stop reading entirely rather than filter line-by-line.
-const STOP_SECTION_RE = /bill summary|order details|download invoice|rate order|order again|get help/i;
+const STOP_SECTION_RE = /bill (summary|details)/i;
 
 // Quantity/descriptor lines like "1 pack (500 ml) - 1 unit" — not product names, and they
 // mark the end of the (possibly multi-line) item name above them.
-const QTY_LINE_RE = /pack|unit/i;
+const QTY_LINE_RE = /pack|unit|\d+\s*(kg|g|ml|l|ltr)\s*x\s*\d+/i;
 
 function guessType(name) {
   const lower = name.toLowerCase();

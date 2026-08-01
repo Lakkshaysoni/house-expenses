@@ -999,7 +999,7 @@ function classifyItem(name, amount) {
 function parseReceiptText(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const priceRe = /(?:₹|Rs\.?|INR)\s?(\d+(?:\.\d{1,2})?)/i;
-  const bareNumRe = /^\d{1,5}(?:\.\d{1,2})?$/;
+  const bareNumRe = /^[^\d]{0,3}(\d{1,6}(?:[.,]\d{1,2})?)[^\d]{0,3}$/;
   const looksLikeQty = /^\d+\s*(unit|pack|ml|g|kg|x)\b/i;
   const items = [];
   let pendingName = '';
@@ -1013,11 +1013,14 @@ function parseReceiptText(text) {
       const amt = Math.round(parseFloat(m[1]));
       if (amt > 0) items.push(classifyItem(name, amt));
       pendingName = '';
-    } else if (bareNumRe.test(line)) {
-      const amt = Math.round(parseFloat(line));
-      if (amt > 0 && pendingName) { items.push(classifyItem(pendingName, amt)); pendingName = ''; }
-    } else if (line.length > 2 && line.length < 60 && !looksLikeQty.test(line)) {
-      pendingName = line;
+    } else {
+      const bareM = line.match(bareNumRe);
+      if (bareM && pendingName) {
+        const amt = Math.round(parseFloat(bareM[1].replace(',', '.')));
+        if (amt > 0) { items.push(classifyItem(pendingName, amt)); pendingName = ''; }
+      } else if (line.length > 2 && line.length < 60 && !looksLikeQty.test(line)) {
+        pendingName = line;
+      }
     }
   }
   return items;
@@ -1029,10 +1032,12 @@ async function handleImg(event) {
   loader(true, 'Reading screenshot (OCR)...');
   try {
     const { data: { text } } = await Tesseract.recognize(file, 'eng');
+    console.log('--- RAW OCR TEXT ---\n' + text);
     const items = parseReceiptText(text);
     if (items.length === 0) {
       loader(false);
-      alert('Could not find any items in that screenshot. Try a clearer image, or enter the expense manually.');
+      const preview = (text || '').trim().slice(0, 600) || '(no text detected at all)';
+      alert('Could not match any items to prices.\n\nHere is what OCR actually read off the image — please screenshot this and share it so the parser can be tuned:\n\n' + preview);
       event.target.value = '';
       return;
     }

@@ -1001,7 +1001,7 @@ const PERSONAL_KEYWORDS = [
 ];
 
 // Lines matching these are receipt chrome (fees, header noise) within the item list — skip just this line.
-const SKIP_LINE_RE = /order\s*#|order id|delivered|items? in order|small cart|surge fee|convenience fee|packaging fee|platform fee|free|^\d{1,2}:\d{2}|^\d+\s*items?\b/i;
+const SKIP_LINE_RE = /order\s*#|order id|delivered|items? in order|small cart|surge fee|convenience fee|packaging fee|platform fee|free|^[^\w]{0,3}\d{1,2}:\d{2}|^[^\w]{0,3}\d+\s*items?\b/i;
 
 // Once we hit any of these, everything below is footer/metadata (fees, totals, order ID,
 // receiver name+phone) — never another item. Stop reading entirely rather than filter line-by-line.

@@ -562,6 +562,7 @@ let state = {
   pendingPersonal: 0,
   pendingOffice: 0,
   splitTotal: 0,
+  splitFreeMode: false,
   viewMonth: getCurrentMonthKey(),
   currentMonthRows: [],
   logPersonFilter: '',
@@ -652,6 +653,7 @@ function proceedAmt() {
 }
 
 function buildSplitUI(total) {
+  state.splitFreeMode = false;
   state.splitItems = [
     { label: 'Mine', amount: 0, type: 'personal' },
     { label: 'House', amount: total, type: 'house' }
@@ -671,7 +673,7 @@ function renderSplit(total) {
         <option value="personal" ${it.type==='personal'?'selected':''}>Mine</option>
         <option value="office" ${it.type==='office'?'selected':''}>Office</option>
       </select>
-      <input class="split-amt" id="split-amt-${i}" type="number" value="${it.amount}" min="0" oninput="stAmt(${i},this.value)"/>
+      <input class="split-amt" id="split-amt-${i}" type="number" value="${it.amount||''}" placeholder="₹" min="0" oninput="stAmt(${i},this.value)"/>
       ${state.splitItems.length > 1 ? `<button class="split-remove" onclick="removeSplit(${i})">✕</button>` : ''}
     </div>
   `).join('');
@@ -685,8 +687,8 @@ function stType(i, v) { state.splitItems[i].type = v; renderSplit(state.splitTot
 function stAmt(i, v) {
   const val = parseInt(v) || 0;
   state.splitItems[i].amount = val;
-  // With exactly 2 splits, auto-fill the other one with the remainder
-  if (state.splitItems.length === 2) {
+  // With exactly 2 splits in fixed-target mode, auto-fill the other one with the remainder
+  if (!state.splitFreeMode && state.splitItems.length === 2) {
     const otherIdx = i === 0 ? 1 : 0;
     const rem = Math.max(0, state.splitTotal - val);
     state.splitItems[otherIdx].amount = rem;
@@ -716,17 +718,28 @@ function updateSplitTotals() {
   document.getElementById('st-office').textContent = '₹'+o.toLocaleString('en-IN');
   state.pendingHouse = h; state.pendingPersonal = p; state.pendingOffice = o;
 
-  const remaining = state.splitTotal - (h + p + o);
   const remEl = document.getElementById('split-remaining');
   const doneBtn = document.getElementById('split-done');
-  if (remaining === 0) {
-    remEl.textContent = 'Fully allocated ✓';
-    remEl.className = 'split-remaining ok';
-    if (doneBtn) { doneBtn.disabled = false; doneBtn.style.opacity = '1'; }
+
+  if (state.splitFreeMode) {
+    // Receipt-derived draft: no fixed target — the total IS whatever you've typed so far.
+    const liveTotal = h + p + o;
+    state.splitTotal = liveTotal;
+    document.getElementById('split-total-disp').textContent = '₹' + liveTotal.toLocaleString('en-IN');
+    remEl.textContent = liveTotal > 0 ? 'Total from prices entered ✓' : 'Type in each item\'s price from your receipt';
+    remEl.className = 'split-remaining ' + (liveTotal > 0 ? 'ok' : 'bad');
+    if (doneBtn) { doneBtn.disabled = liveTotal <= 0; doneBtn.style.opacity = liveTotal <= 0 ? '0.5' : '1'; }
   } else {
-    remEl.textContent = 'Remaining: ₹' + remaining.toLocaleString('en-IN');
-    remEl.className = 'split-remaining bad';
-    if (doneBtn) { doneBtn.disabled = true; doneBtn.style.opacity = '0.5'; }
+    const remaining = state.splitTotal - (h + p + o);
+    if (remaining === 0) {
+      remEl.textContent = 'Fully allocated ✓';
+      remEl.className = 'split-remaining ok';
+      if (doneBtn) { doneBtn.disabled = false; doneBtn.style.opacity = '1'; }
+    } else {
+      remEl.textContent = 'Remaining: ₹' + remaining.toLocaleString('en-IN');
+      remEl.className = 'split-remaining bad';
+      if (doneBtn) { doneBtn.disabled = true; doneBtn.style.opacity = '0.5'; }
+    }
   }
 }
 
@@ -988,42 +1001,41 @@ const PERSONAL_KEYWORDS = [
 ];
 
 // Lines matching these are receipt chrome (fees, totals, headers) — never treated as items.
-const SKIP_LINE_RE = /bill summary|item total|delivery fee|handling fee|total bill|grand total|order\s*#|order id|order details|receiver details|rate order|order again|get help|delivered|items? in order|download invoice|small cart|surge fee|convenience fee|packaging fee|platform fee|^\d{1,2}:\d{2}$/i;
+const SKIP_LINE_RE = /bill summary|item total|delivery fee|handling fee|total bill|grand total|order\s*#|order id|order details|receiver details|rate order|order again|get help|delivered|items? in order|download invoice|small cart|surge fee|convenience fee|packaging fee|platform fee|free|^\d{1,2}:\d{2}|^\d+\s*items?\b/i;
 
-function classifyItem(name, amount) {
+// Quantity/descriptor lines like "1 pack (500 ml) - 1 unit" — not product names.
+const QTY_LINE_RE = /\b(unit|units|pack|packs)\b/i;
+
+function guessType(name) {
   const lower = name.toLowerCase();
-  const isPersonal = PERSONAL_KEYWORDS.some(k => lower.includes(k));
-  return { label: name, amount, type: isPersonal ? 'personal' : 'house' };
+  return PERSONAL_KEYWORDS.some(k => lower.includes(k)) ? 'personal' : 'house';
 }
 
-function parseReceiptText(text) {
+function looksLikeRealName(s) {
+  if (s.length < 4 || s.length > 70) return false;
+  const letters = (s.match(/[A-Za-z]/g) || []).length;
+  return letters / s.length > 0.5; // majority letters, not mostly digits/symbols/noise
+}
+
+// OCR reliably reads letters far better than the ₹ symbol (which gets misread as stray
+// digits/letters and corrupts any nearby number). So we ONLY trust OCR for item names —
+// every price must be typed in by the person reviewing the draft, never auto-filled.
+function parseReceiptItemNames(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  const priceRe = /(?:₹|Rs\.?|INR)\s?(\d+(?:\.\d{1,2})?)/i;
-  const bareNumRe = /^[^\d]{0,3}(\d{1,6}(?:[.,]\d{1,2})?)[^\d]{0,3}$/;
-  const looksLikeQty = /^\d+\s*(unit|pack|ml|g|kg|x)\b/i;
-  const items = [];
-  let pendingName = '';
-  for (const line of lines) {
-    if (SKIP_LINE_RE.test(line)) { pendingName = ''; continue; }
-    const m = line.match(priceRe);
-    if (m) {
-      const withoutPrice = line.replace(priceRe, '').trim();
-      const name = (pendingName && pendingName.length > 2) ? pendingName
-                 : (withoutPrice.length > 2 ? withoutPrice : 'Item');
-      const amt = Math.round(parseFloat(m[1]));
-      if (amt > 0) items.push(classifyItem(name, amt));
-      pendingName = '';
-    } else {
-      const bareM = line.match(bareNumRe);
-      if (bareM && pendingName) {
-        const amt = Math.round(parseFloat(bareM[1].replace(',', '.')));
-        if (amt > 0) { items.push(classifyItem(pendingName, amt)); pendingName = ''; }
-      } else if (line.length > 2 && line.length < 60 && !looksLikeQty.test(line)) {
-        pendingName = line;
-      }
-    }
+  const names = [];
+  for (let line of lines) {
+    if (SKIP_LINE_RE.test(line)) continue;
+    if (QTY_LINE_RE.test(line)) continue;
+    // Strip a short leading garbage token some OCR runs glue on (e.g. "Ny Amul..." -> "Amul...")
+    const leadStrip = line.match(/^[^\w]{0,2}[A-Za-z]{1,3}\s+([A-Z][A-Za-z].{4,})$/);
+    if (leadStrip) line = leadStrip[1];
+    // Strip trailing digits merged onto the name (often a corrupted price fragment)
+    line = line.replace(/\s*[\d.:]{1,8}\s*$/, '').trim();
+    line = line.replace(/^[^\w]+|[^\w]+$/g, '').trim();
+    if (looksLikeRealName(line)) names.push(line);
   }
-  return items;
+  // de-duplicate while preserving order
+  return [...new Set(names)];
 }
 
 async function handleImg(event) {
@@ -1033,21 +1045,21 @@ async function handleImg(event) {
   try {
     const { data: { text } } = await Tesseract.recognize(file, 'eng');
     console.log('--- RAW OCR TEXT ---\n' + text);
-    const items = parseReceiptText(text);
-    if (items.length === 0) {
+    const names = parseReceiptItemNames(text);
+    if (names.length === 0) {
       loader(false);
       const preview = (text || '').trim().slice(0, 600) || '(no text detected at all)';
-      alert('Could not match any items to prices.\n\nHere is what OCR actually read off the image — please screenshot this and share it so the parser can be tuned:\n\n' + preview);
+      alert('Could not find item names in that screenshot.\n\nHere is what OCR actually read — please screenshot this and share it so the parser can be tuned:\n\n' + preview);
       event.target.value = '';
       return;
     }
-    state.splitItems = items;
-    const total = items.reduce((s,x) => s + x.amount, 0);
+    // Prices are never auto-filled from OCR (the ₹ symbol gets misread and corrupts nearby
+    // digits) — every amount starts blank so you type it from the receipt on your screen.
+    state.splitItems = names.map(n => ({ label: n, amount: 0, type: guessType(n) }));
     state.cat = 'mixed';
-    state.amtStr = String(total);
+    state.splitFreeMode = true;
     loader(false);
-    renderSplit(total);
-    updateSplitTotals();
+    renderSplit(0);
     document.getElementById('split-done').className = `action-btn ${state.clr}`;
     showScreen('s-split');
   } catch (err) {
